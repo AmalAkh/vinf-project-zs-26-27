@@ -1,0 +1,6 @@
+.venv
+**/__pycache__/
+tmp/
+data/parsed
+data/scrapped
+data/indexed
