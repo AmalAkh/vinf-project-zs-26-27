@@ -1,15 +1,17 @@
 import requests
 import sys
+import os
 from pathlib import Path
-
+import uuid
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 from src.crawling.extractor import extract_links
-from src.crawling.utils import get_page_source, filter_links, save_list_to_txt, read_txt_as_list, format_links
+from src.crawling.utils import get_page_source, filter_links, save_list_to_txt, read_txt_as_list, format_links, save_source_to_html
 
 CRAWLER_READ_LINKS_PATH="data/read_links.txt"
 CRAWLER_UNREAD_LINKS_PATH="data/unread_links.txt"
 CRAWLER_ALL_LINKS_PATH="data/links.txt"
+CRAWLER_RAW_DATA_PATH="data/raw_data/"
 
 
 class Crawler:
@@ -40,9 +42,10 @@ class Crawler:
 
     def _crawl_link(self,target_link:str)->list[str]:
 
-        start_page_source = get_page_source(target_link)
-
-        links = extract_links(start_page_source)
+        page_source = get_page_source(target_link)
+        path = save_source_to_html(CRAWLER_RAW_DATA_PATH, page_source)
+        
+        links = extract_links(page_source)
         
         filtered_links = filter_links(links, target_link)
         formatted_links = format_links(filtered_links)

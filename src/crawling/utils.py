@@ -3,6 +3,8 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 from pathlib import Path
 import urllib
+import uuid
+import os
 
 def get_page_source(url):
     '''
@@ -42,4 +44,17 @@ def save_list_to_txt(list:list[str]|set[str], path:str|Path):
 def read_txt_as_list(path:str|Path)->list[str]:
     with open(path, "w+") as file:
         return file.readlines()
+
+
+
+def save_source_to_html(folder:Path|str, source:str)->tuple[str,str]:
+    id = str(uuid.uuid4())
+    path = os.path.join(folder, id)
+    with open(path, "w+") as file:
+        file.write(source)
+    return id, path
+
+def load_html_source(path:Path|str, source:str):
+    with open(path, "w+") as file:
+        return file.read(source)
 
