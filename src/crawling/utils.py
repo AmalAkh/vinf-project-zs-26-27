@@ -1,6 +1,9 @@
 import requests
 from selenium import webdriver
 from selenium.webdriver.common.by import By
+from pathlib import Path
+import urllib
+
 def get_page_source(url):
     '''
     res = requests.get(url) 
@@ -21,3 +24,22 @@ def _filter_link(link:str, current_link:str):
         
 def filter_links(links:list[str], current_link:str):
     return filter(lambda link: _filter_link(link, current_link), links)
+
+BASE_URL = "https://www.militaryfactory.com"
+def _format_link(link:str):
+    if link.startswith("/"):
+        return urllib.parse.urljoin(BASE_URL, link)
+    else:
+        return link
+def format_links(links:list[str])->list[str]:
+    return list(map(_format_link,links))
+
+def save_list_to_txt(list:list[str]|set[str], path:str|Path):
+
+    with open(path, "w+") as file:
+        file.write("\n".join(list))
+
+def read_txt_as_list(path:str|Path)->list[str]:
+    with open(path, "w+") as file:
+        return file.readlines()
+
