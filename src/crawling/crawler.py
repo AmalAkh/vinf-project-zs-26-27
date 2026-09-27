@@ -1,6 +1,7 @@
 import requests
 import sys
 import os
+import time
 from pathlib import Path
 import uuid
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
@@ -15,7 +16,7 @@ CRAWLER_RAW_DATA_PATH="data/raw_data/"
 
 
 class Crawler:
-    def __init__(self, timeout:int=20):
+    def __init__(self, timeout:int=15):
         self.timeout = timeout
 
         self._read_links = set(read_txt_as_list(CRAWLER_READ_LINKS_PATH))
@@ -43,7 +44,7 @@ class Crawler:
     def _crawl_link(self,target_link:str)->list[str]:
 
         page_source = get_page_source(target_link)
-        path = save_source_to_html(CRAWLER_RAW_DATA_PATH, page_source)
+        path = save_source_to_html(CRAWLER_RAW_DATA_PATH, page_source, target_link)
         
         links = extract_links(page_source)
         
@@ -58,13 +59,16 @@ class Crawler:
     def _crawl_links(self, start_links:list[str]):
         result_links = []
         for link in start_links:
-            extracted_links = self._crawl_link(link)
-            result_links.extend(extracted_links)
-
+            if not(link in self._read_links):
+                extracted_links = self._crawl_link(link)
+                result_links.extend(extracted_links)
+                time.sleep(self.timeout)
         return result_links
 
-    def crawl_source(self, source_links:list[str], depth:int=3):
+    def crawl_source(self, source_links:list[str], depth:int=2):
         self._crawl_links(source_links)
+        for i in range(1,depth):
+            self._crawl_links(self._unread_links.copy())
 
 
         
