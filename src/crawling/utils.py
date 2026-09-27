@@ -6,18 +6,45 @@ import urllib
 import uuid
 import os
 import re
+import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
+from src.utils.logging import log
 
-def get_page_source(url):
-    '''
-    res = requests.get(url) 
-    print(res.status_code)
-    source = res.text
-    return source
+def get_page_source(url)->str:
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36"
+    }
+  
+    session = requests.Session()
+
+    retry_strategy = Retry(
+        total=3,
+        backoff_factor=1,
+        status_forcelist=[502, 503, 504],
+    )
+
+    adapter = HTTPAdapter(max_retries=retry_strategy)
+
+    session.mount("https://", adapter)
+    session.mount("http://", adapter)
+
+
+    response = session.get(
+        url=url,
+        timeout=(3, 7),
+        headers=headers
+    )
+    return response.text
+
+
+        
     '''
     driver = webdriver.Chrome()
 
     driver.get(url)
     return driver.page_source
+    '''
 
 
 def _filter_link(link:str, current_link:str):
