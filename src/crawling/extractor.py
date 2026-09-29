@@ -44,14 +44,15 @@ def extract_variants(source: str):
 def extract_performance_parameters(source:str):
     pattern = (
         r'<div[^>]*class="specContainerMain[^"]*">\s*'
-        r'<span[^>]*class="textNormal textDkGray">([^<]+)</span>\s*'
-        r'<br>\s*'
-        r'<span[^>]*class="textBold textLargest textDkGray">[^<]+</span>\s*'
-        r'<br>\s*'
-        r'<span[^>]*class="textNormal textDkGray">\(([^<]+)\)</span>\s*'
-        r'</div>\s*'
+        r'<span[^>]*class="textNormal[^">]*">([^<]+)</span>\s*'
+        r'<br\s*/?>\s*'
+        r'<span[^>]*class="textBold[^">]*">[^<]+</span>\s*'
+        r'<br\s*/?>\s*'
+        r'<span[^>]*class="textNormal[^">]*">\(([^<]+)\)</span>\s*'
+        r'</div>'
     )
     matches = re.findall(pattern, source, re.DOTALL | re.IGNORECASE)
+    print(matches)
 
     return {match[0]:match[1] for match in matches}
 
@@ -83,13 +84,13 @@ def extract_data(source:str)->dict[str, any]:
 if __name__ == "__main__":
     import json
     
-    with open("./data/raw_data/aircraft_detail_aircraft_id_741.html", "r") as file:
+    with open("./data/raw_data/aircraft_detail_aircraft_id_719.html", "r") as file:
         page_src = file.read()
         data = extract_data(page_src)
         with open("./tmp/result.json", "w+") as result_file:
             json.dump(data, result_file, indent=2)
     
-    with open("./data/raw_data/aircraft_detail_aircraft_id_741.html", "r") as file:
+    with open("./data/raw_data/aircraft_detail_aircraft_id_719.html", "r") as file:
             page_src = file.read()
             print(extract_unit_produced(page_src))
 
