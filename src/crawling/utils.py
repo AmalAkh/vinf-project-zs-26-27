@@ -10,6 +10,7 @@ import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 from src.utils.logging import log
+import json 
 
 def get_page_source(url)->str:
     headers = {
@@ -75,14 +76,15 @@ def read_txt_as_list(path:str|Path)->list[str]:
         return file.readlines()
 
 
-
-def save_source_to_html(folder:Path|str, source:str, link:str)->tuple[str,str]:
+def build_filename_from_link(link:str):
     id = link.replace(BASE_URL, "")
     id = re.sub(r"(\.php)|(\.html)", "", id)
     id = re.sub(r"[\W_]", "_", id)
     id = re.sub(r"^_", "", id)
+    return id
 
-    
+def save_source_to_html(folder:Path|str, source:str, link:str)->tuple[str,str]:
+    id = build_filename_from_link(link)
     path = os.path.join(folder, id+".html")
     with open(path, "w+") as file:
         file.write(source)
@@ -91,4 +93,11 @@ def save_source_to_html(folder:Path|str, source:str, link:str)->tuple[str,str]:
 def load_html_source(path:Path|str, source:str):
     with open(path, "w+") as file:
         return file.read(source)
+
+def save_parsed_as_json(folder:Path|str,original_link:str, data:dict[str,any]):
+    id = build_filename_from_link(original_link)
+    path = os.path.join(folder, id+".json")
+    with open(path+".json", "w+") as file:
+        json.dump(data, file, indent=2)
+    return id
 

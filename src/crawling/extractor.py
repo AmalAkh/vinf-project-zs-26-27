@@ -5,10 +5,92 @@ import re
 def extract_links(source:str)->list[str]:
     pattern = r'<(?:a|div).*?(?:href|data-url)="([^"]*)"'
     matches = re.findall(pattern, source)
-   
+    
     return matches
+
+def extract_title(source:str)->str:
+    pattern = r'<h1 class="textJumbo"><span class="textBold">(.+)</span></h1>'
+    match = re.search(pattern, source)
+    if match is None:
+        return ""
+    return match.group(1)
+
+
+def extract_description(source:str)->str:
+    pattern = r'<div class="contentStripOuter stripBGcolor3">.*?<span class="textLarge textDkGray">\s*(.*?)\s*</span>'
+    
+    match = re.search(pattern, source, re.DOTALL)
+    if match is None:
+        return ""
+    return match.group(1)
+
+def extract_variants(source: str):
+    pattern = (
+        r'<button[^>]*class="[^"]*collapsible[^"]*picTrans[^"]*"[^>]*>.*?Variants.*?</button>\s*'
+        r'<div[^>]*class="[^"]*dropdownContent[^"]*"[^>]*>\s*'
+        r'<div[^>]*>\s*'
+        r'<span[^>]*class="[^"]*textDkGray[^"]*textNormal"[^>]*>(.*?)</span>'
+    )
+
+    match = re.search(pattern, source, re.DOTALL | re.IGNORECASE)
+    
+    if match is None:
+        return ""
+    clearing_pattern = r'</?[^>]+>'
+    cleared = re.sub(clearing_pattern,"", match.group(1), 0, re.DOTALL | re.IGNORECASE)
+    split_variants = cleared.split("\n")
+    return split_variants
+
+def extract_performance_parameters(source:str):
+    pattern = (
+        r'<div[^>]*class="specContainerMain[^"]*">\s*'
+        r'<span[^>]*class="textNormal textDkGray">([^<]+)</span>\s*'
+        r'<br>\s*'
+        r'<span[^>]*class="textBold textLargest textDkGray">[^<]+</span>\s*'
+        r'<br>\s*'
+        r'<span[^>]*class="textNormal textDkGray">\(([^<]+)\)</span>\s*'
+        r'</div>\s*'
+    )
+    matches = re.findall(pattern, source, re.DOTALL | re.IGNORECASE)
+
+    return {match[0]:match[1] for match in matches}
+
+
+def extract_unit_produced(source:str):
+    pattern = (
+            r'Total Production:.+ (\d+?) Units'
+        )
+    
+    match = re.search(pattern, source, re.DOTALL | re.IGNORECASE)
+    
+    if match is None:
+        return ""
+    return match[1]
+
+def extract_data(source:str)->dict[str, any]:
+    result = dict()
+    result["title"] = extract_title(source)
+    result["description"] = extract_description(source)
+    result["links"] = extract_links(source)
+    result["variants"] = extract_variants(source)
+    result["paramaters"] = extract_performance_parameters(source)
+
+
+    return result
+
 
 
 if __name__ == "__main__":
+    import json
     
-    print(extract_links("t<a href=\"test\" data-test=\"123\">t</a>t"))
+    with open("./data/raw_data/aircraft_detail_aircraft_id_741.html", "r") as file:
+        page_src = file.read()
+        data = extract_data(page_src)
+        with open("./tmp/result.json", "w+") as result_file:
+            json.dump(data, result_file, indent=2)
+    
+    with open("./data/raw_data/aircraft_detail_aircraft_id_741.html", "r") as file:
+            page_src = file.read()
+            print(extract_unit_produced(page_src))
+
+    
