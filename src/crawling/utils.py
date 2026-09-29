@@ -68,7 +68,7 @@ def format_links(links:list[str])->list[str]:
 def save_list_to_txt(list:list[str]|set[str], path:str|Path):
 
     with open(path, "w+") as file:
-        file.write("\n".join(list))
+        file.write("\n".join(list).replace("\n\n", "\n"))
 
 def read_txt_as_list(path:str|Path)->list[str]:
     with open(path, "a+") as file:
