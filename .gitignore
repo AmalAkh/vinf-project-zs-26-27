@@ -4,3 +4,5 @@ tmp/
 data/parsed
 data/scrapped
 data/indexed
+data/raw_data
+data/
