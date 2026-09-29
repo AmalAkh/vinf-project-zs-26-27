@@ -55,7 +55,7 @@ def extract_performance_parameters(source:str):
         r'</div>'
     )
     matches = re.findall(pattern, source, re.DOTALL | re.IGNORECASE)
-    print(matches)
+
 
     return {match[0]:match[1] for match in matches}
 
@@ -71,6 +71,28 @@ def extract_unit_produced(source:str):
         return ""
     return match[1]
 
+def extract_operators(source:str):
+    pattern = (
+        r'<a\s[^>]*'
+        r'class="picTrans"[^>]*'
+        r'title="[^"]*nation of (?:the )?([^"]+)"'
+        r'[^>]*>'
+    )
+        
+    matches = re.findall(pattern, source, re.DOTALL | re.IGNORECASE)
+    
+    return matches
+
+def extract_roles(source:str):
+    pattern = (
+        r'<div[^>"]+class="roleContainers[^>"]*">([^>]+)'
+        r'</div>'
+    )
+
+    matches = re.findall(pattern, source, re.DOTALL | re.IGNORECASE)
+        
+    return [match.strip() for match in matches]
+
 def extract_data(source:str)->dict[str, any]:
     result = dict()
     result["title"] = extract_title(source)
@@ -78,9 +100,13 @@ def extract_data(source:str)->dict[str, any]:
     result["links"] = extract_links(source)
     result["variants"] = extract_variants(source)
     result["paramaters"] = extract_performance_parameters(source)
-
+    result["operators"] = extract_operators(source)
+    result["role"] = extract_roles(source)
 
     return result
+
+    
+
 
 
 
@@ -93,8 +119,8 @@ if __name__ == "__main__":
         with open("./tmp/result.json", "w+") as result_file:
             json.dump(data, result_file, indent=2)
     
-    with open('/Users/amalakhmadinurov/Downloads/WWI Aircraft (1914-1918).html', "r") as file:
+    with open('/Users/amalakhmadinurov/Downloads/Bleriot XI Trainer _ Reconnaissance Monoplane Aircraft.html', "r") as file:
             page_src = file.read()
-            print(extract_links(page_src))
+            print(extract_roles(page_src))
 
     
