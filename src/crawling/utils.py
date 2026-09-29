@@ -11,6 +11,7 @@ from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 from src.utils.logging import log
 import json 
+from urllib import parse
 
 def get_page_source(url)->str:
     headers = {
@@ -41,6 +42,7 @@ def get_page_source(url)->str:
 
         
     '''
+
     driver = webdriver.Chrome()
 
     driver.get(url)
@@ -48,22 +50,40 @@ def get_page_source(url)->str:
     '''
 
 
-def _filter_link(link:str, current_link:str):
-    clear_link = link.strip()
-
-    return "aircraft" in clear_link and clear_link != "" and clear_link != "#" and not(current_link in clear_link)
-        
-def filter_links(links:list[str], current_link:str):
-    return filter(lambda link: _filter_link(link, current_link), links)
 
 BASE_URL = "https://www.militaryfactory.com"
-def _format_link(link:str):
+
+
+def _filter_link(link: str, current_link: str) -> bool:
+    clear_link = link.strip()
+
+    return (
+        "aircraft" in clear_link
+        and clear_link != ""
+        and clear_link != "#"
+        and current_link not in clear_link
+    )
+
+
+def filter_links(links: dict[str, str], current_link: str) -> dict[str, str]:
+    return {
+        text: link
+        for text, link in links.items()
+        if _filter_link(link, current_link)
+    }
+
+
+def _format_link(link: str) -> str:
     if link.startswith("/"):
-        return urllib.parse.urljoin(BASE_URL, link)
-    else:
-        return link
-def format_links(links:list[str])->list[str]:
-    return list(map(_format_link,links))
+        return parse.urljoin(BASE_URL, link)
+    return link
+
+
+def format_links(links: dict[str, str]) -> dict[str, str]:
+    return {
+        text: _format_link(link)
+        for text, link in links.items()
+    }
 
 def save_list_to_txt(list:list[str]|set[str], path:str|Path):
 
@@ -97,7 +117,7 @@ def load_html_source(path:Path|str, source:str):
 def save_parsed_as_json(folder:Path|str,original_link:str, data:dict[str,any]):
     id = build_filename_from_link(original_link)
     path = os.path.join(folder, id+".json")
-    with open(path+".json", "w+") as file:
+    with open(path, "w+") as file:
         json.dump(data, file, indent=2)
     return id
 

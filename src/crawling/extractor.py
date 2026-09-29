@@ -3,10 +3,13 @@ import re
 
 
 def extract_links(source:str)->list[str]:
-    pattern = r'<(?:a|div).*?(?:href|data-url)="([^"]*)"'
-    matches = re.findall(pattern, source)
-    
-    return matches
+    pattern1 = r'<(a|div)\b[^>]*\s(?:href|data-url)="([^"]*)"[^>]*>([^<]*)</\1>'
+    matches = re.findall(pattern1, source)
+
+    pattern2 = r'<(a|div)\b[^>]*\s(?:href|data-url)="([^"]*)"\s[^>]*title="([^>"]+)"\s*[^>]*>[\s\S]*?</\1>'
+    matches2 = re.findall(pattern2, source, re.DOTALL)
+    matches.extend(matches2)
+    return {match[2]:match[1] for match in matches}
 
 def extract_title(source:str)->str:
     pattern = r'<h1 class="textJumbo"><span class="textBold">(.+)</span></h1>'
@@ -84,14 +87,14 @@ def extract_data(source:str)->dict[str, any]:
 if __name__ == "__main__":
     import json
     
-    with open("./data/raw_data/aircraft_detail_aircraft_id_719.html", "r") as file:
+    with open('/Users/amalakhmadinurov/Downloads/WWI Aircraft (1914-1918).html', "r") as file:
         page_src = file.read()
         data = extract_data(page_src)
         with open("./tmp/result.json", "w+") as result_file:
             json.dump(data, result_file, indent=2)
     
-    with open("./data/raw_data/aircraft_detail_aircraft_id_719.html", "r") as file:
+    with open('/Users/amalakhmadinurov/Downloads/WWI Aircraft (1914-1918).html', "r") as file:
             page_src = file.read()
-            print(extract_unit_produced(page_src))
+            print(extract_links(page_src))
 
     
