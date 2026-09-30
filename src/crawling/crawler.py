@@ -59,7 +59,7 @@ class Crawler:
         extracted_data["links"] = filter_links(extracted_data["links"], target_link)
         extracted_data["links"] = format_links(extracted_data["links"])
 
-        extract_data["source_link"] = target_link
+        extracted_data["source_link"] = target_link
         
         save_parsed_as_json(CRAWLER_PARSED_DATA_PATH, target_link, extracted_data)
 

@@ -4,18 +4,22 @@ import re
 
 def extract_links(source:str)->list[str]:
     pattern1 = r'<(a|div)\b[^>]*\s(?:href|data-url)="([^"]*)"[^>]*>([^<]*)</\1>'
-    matches = re.findall(pattern1, source)
+    matches1 = re.findall(pattern1, source)
 
     pattern2 = r'<(a|div)\b[^>]*\s(?:href|data-url)="([^"]*)"\s[^>]*title="([^>"]+)"\s*[^>]*>[\s\S]*?</\1>'
     matches2 = re.findall(pattern2, source, re.DOTALL)
-    matches.extend(matches2)
-    return {match[2]:match[1] for match in matches}
+    matches1.extend(matches2)
+    return {match[2]:match[1] for match in matches1}
 
 def extract_title(source:str)->str:
-    pattern = r'<h1 class="textJumbo"><span class="textBold">(.+)</span></h1>'
-    match = re.search(pattern, source)
+    main_pattern = r'<h1 class="textJumbo"><span class="textBold">(.+)</span></h1>'
+    match = re.search(main_pattern, source)
     if match is None:
-        return ""
+        fallback_pattern = r'<title[^>]*>(.+?)</title>'
+        match = re.search(fallback_pattern, source, re.DOTALL | re.IGNORECASE)
+        if match is None:
+            return ""
+        
     return match.group(1)
 
 
@@ -25,7 +29,9 @@ def extract_description(source:str)->str:
     match = re.search(pattern, source, re.DOTALL)
     if match is None:
         return ""
-    return match.group(1)
+    text = match.group(1).replace("\n", "")
+    text = re.sub(r'</?[^>]+\s*/?>',"",text)
+    return text
 
 def extract_variants(source: str):
     pattern = (
@@ -119,8 +125,8 @@ if __name__ == "__main__":
         with open("./tmp/result.json", "w+") as result_file:
             json.dump(data, result_file, indent=2)
     
-    with open('/Users/amalakhmadinurov/Downloads/Bleriot XI Trainer _ Reconnaissance Monoplane Aircraft.html', "r") as file:
+    with open('/Users/amalakhmadinurov/Downloads/WWI Aircraft (1914-1918).html', "r") as file:
             page_src = file.read()
-            print(extract_roles(page_src))
+            print(extract_title(page_src))
 
     
