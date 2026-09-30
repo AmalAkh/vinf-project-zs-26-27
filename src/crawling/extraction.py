@@ -24,14 +24,15 @@ def extract_title(source:str)->str:
 
 
 def extract_description(source:str)->str:
-    pattern = r'<div class="contentStripOuter stripBGcolor3">.*?<span class="textLarge textDkGray">\s*(.*?)\s*</span>'
+    pattern = r'<div class="contentStripOuter[^"]*">.*?<span class="[^"]*">\s*(.*?)\s*</span>'
     
     match = re.search(pattern, source, re.DOTALL)
     if match is None:
         return ""
-    text = match.group(1).replace("\n", "")
-    text = re.sub(r'</?[^>]+\s*/?>',"",text)
-    return text
+    text = match.group(1).replace("\n", " ")
+    text = re.sub(r'</?[^>]+\s*/?>'," ",text)
+    text = re.sub(r" {2,}", " ", text)
+    return text, match.group(1)
 
 def extract_variants(source: str):
     pattern = (
@@ -102,7 +103,11 @@ def extract_roles(source:str):
 def extract_data(source:str)->dict[str, any]:
     result = dict()
     result["title"] = extract_title(source)
-    result["description"] = extract_description(source)
+    clear_text, raw_desc_content = extract_description(source)
+    result["content_clear"] = clear_text
+    result["content_raw"] = raw_desc_content
+
+
     result["links"] = extract_links(source)
     result["variants"] = extract_variants(source)
     result["paramaters"] = extract_performance_parameters(source)
@@ -119,13 +124,13 @@ def extract_data(source:str)->dict[str, any]:
 if __name__ == "__main__":
     import json
     
-    with open('/Users/amalakhmadinurov/Downloads/WWI Aircraft (1914-1918).html', "r") as file:
+    with open('/Users/amalakhmadinurov/Downloads/Sukhoi Su-27 (Flanker) Air Superiority _ Ground Attack _ Multirole Fighter.html', "r") as file:
         page_src = file.read()
         data = extract_data(page_src)
         with open("./tmp/result.json", "w+") as result_file:
             json.dump(data, result_file, indent=2)
     
-    with open('/Users/amalakhmadinurov/Downloads/WWI Aircraft (1914-1918).html', "r") as file:
+    with open('/Users/amalakhmadinurov/Downloads/Sukhoi Su-27 (Flanker) Air Superiority _ Ground Attack _ Multirole Fighter.html', "r") as file:
             page_src = file.read()
             print(extract_title(page_src))
 

@@ -46,7 +46,6 @@ class Crawler:
 
     def _crawl_link(self,target_link:str)->list[str]:
 
-        
         try:
             page_source = get_page_source(target_link)
             
