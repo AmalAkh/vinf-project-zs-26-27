@@ -19,7 +19,7 @@ CRAWLER_PARSED_DATA_PATH="data/parsed/"
 
 
 class Crawler:
-    def __init__(self, timeout:int=15):
+    def __init__(self, timeout:int=12):
         self.timeout = timeout
 
         self._read_links = set(read_txt_as_list(CRAWLER_READ_LINKS_PATH))

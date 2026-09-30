@@ -100,9 +100,26 @@ def extract_roles(source:str):
         
     return [match.strip() for match in matches]
 
+    
+def extract_country_and_year(source:str):
+    pattern = (
+        r'<h3[^>]*class="[^"]*">\s*([^|>]+?) \| ([^|>]+?)</h3>'
+    )
+        
+    match = re.search(pattern, source, re.DOTALL | re.IGNORECASE)
+    
+    if match is None:
+        return "", ""
+    return match[1], match[2]
+
 def extract_data(source:str)->dict[str, any]:
     result = dict()
     result["title"] = extract_title(source)
+
+    country, year = extract_country_and_year(source)
+    result["year"] = year
+    result["country"] = country
+
     clear_text, raw_desc_content = extract_description(source)
     result["content_clear"] = clear_text
     result["content_raw"] = raw_desc_content
@@ -113,12 +130,9 @@ def extract_data(source:str)->dict[str, any]:
     result["paramaters"] = extract_performance_parameters(source)
     result["operators"] = extract_operators(source)
     result["role"] = extract_roles(source)
-
-    return result
-
     
 
-
+    return result
 
 
 if __name__ == "__main__":
@@ -132,6 +146,6 @@ if __name__ == "__main__":
     
     with open('/Users/amalakhmadinurov/Downloads/Sukhoi Su-27 (Flanker) Air Superiority _ Ground Attack _ Multirole Fighter.html', "r") as file:
             page_src = file.read()
-            print(extract_title(page_src))
+            print(extract_country_and_year(page_src))
 
     
