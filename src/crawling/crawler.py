@@ -80,9 +80,9 @@ class Crawler:
                 time.sleep(self.timeout)
         return result_links
 
-    def crawl_source(self, source_links:list[str], depth:int=2):
+    def crawl_source(self, source_links:list[str]):
         self._crawl_links(source_links)
-        for i in range(1,depth):
+        while len(self._unread_links) > 0:
             self._crawl_links(self._unread_links.copy())
 
 
