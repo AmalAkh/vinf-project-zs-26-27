@@ -23,16 +23,33 @@ def extract_title(source:str)->str:
     return match.group(1)
 
 
-def extract_description(source:str)->str:
-    pattern = r'<div class="contentStripOuter[^"]*">.*?<span class="[^"]*">\s*(.*?)\s*</span>'
-    
-    match = re.search(pattern, source, re.DOTALL)
-    if match is None:
-        return ""
-    text = match.group(1).replace("\n", " ")
-    text = re.sub(r'</?[^>]+\s*/?>'," ",text)
-    text = re.sub(r" {2,}", " ", text)
-    return text, match.group(1)
+import re
+
+def extract_description(source: str) -> tuple[str, str]:
+    pattern = (
+        r'<!--BODYTEXT\d+-->\s*'
+        r'<div class="contentStripOuter[^"]*">.*?'
+        r'<span class="[^"]*">\s*(.*?)\s*</span>.*?'
+        r'<!--BODYTEXT\d+-->\s*'
+    )
+
+    matches = re.findall(pattern, source, re.DOTALL)
+
+    if not matches:
+        return "", ""
+
+    raw_content = " ".join(matches)
+
+    cleaned_parts = []
+    for content in matches:
+        text = content.replace("\n", " ")
+        text = re.sub(r'</?[^>]+\s*/?>', " ", text)
+        text = re.sub(r'\s{2,}', ' ', text)
+        cleaned_parts.append(text.strip())
+
+    clear_content = " ".join(cleaned_parts)
+
+    return clear_content, raw_content
 
 def extract_variants(source: str):
     pattern = (
