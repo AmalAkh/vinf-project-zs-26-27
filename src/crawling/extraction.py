@@ -129,6 +129,23 @@ def extract_country_and_year(source:str):
         return "", ""
     return match[1], match[2]
 
+def extract_armament(source:str):
+    pattern = (
+        r'<button[^>]*class="[^"]*collapsible[^"]*picTrans[^"]*"[^>]*>.*?Armament.*?</button>\s*'
+        r'<div[^>]*class="[^"]*dropdownContent[^"]*"[^>]*>\s*'
+        r'<div[^>]*>\s*'
+        r'<span[^>]*class="[^"]*textDkGray[^"]*textNormal"[^>]*>(.*?)</span>'
+    )
+
+    match = re.search(pattern, source, re.DOTALL | re.IGNORECASE)
+    
+    if match is None:
+        return ""
+    clearing_pattern = r'</?[^>]+>'
+    cleared = re.sub(clearing_pattern,"", match.group(1), 0, re.DOTALL | re.IGNORECASE)
+    return cleared
+
+
 def extract_data(source:str)->dict[str, any]:
     result = dict()
     result["title"] = extract_title(source)
@@ -147,6 +164,8 @@ def extract_data(source:str)->dict[str, any]:
     result["paramaters"] = extract_performance_parameters(source)
     result["operators"] = extract_operators(source)
     result["role"] = extract_roles(source)
+    result["armamenr"] = extract_armament(source)
+
     
 
     return result
@@ -163,6 +182,6 @@ if __name__ == "__main__":
     
     with open('/Users/amalakhmadinurov/Downloads/Sukhoi Su-27 (Flanker) Air Superiority _ Ground Attack _ Multirole Fighter.html', "r") as file:
             page_src = file.read()
-            print(extract_country_and_year(page_src))
+            print(extract_armament(page_src))
 
     
