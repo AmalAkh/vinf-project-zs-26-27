@@ -145,6 +145,22 @@ def extract_armament(source:str):
     cleared = re.sub(clearing_pattern,"", match.group(1), 0, re.DOTALL | re.IGNORECASE)
     return cleared
 
+def extract_propulsion(source:str):
+    pattern = (
+            r'<div[^>]*class="[^"]*specContainerMain[^"]*">\s*'
+            r'<span[^>]*class="[^">]*">.*?Propulsion.*?</span>\s*'
+            r'<br\s*/?>\s*'
+            r'<span[^>]*class="[^">]*">\s*([^>]*)\s*</span>'
+        )
+
+    match = re.search(pattern, source, re.DOTALL | re.IGNORECASE)
+    
+    if match is None:
+        return ""
+    clearing_pattern = r'</?[^>]+>'
+    cleared = re.sub(clearing_pattern,"", match.group(1), 0, re.DOTALL | re.IGNORECASE)
+    return cleared
+
 
 def extract_data(source:str)->dict[str, any]:
     result = dict()
@@ -164,7 +180,9 @@ def extract_data(source:str)->dict[str, any]:
     result["paramaters"] = extract_performance_parameters(source)
     result["operators"] = extract_operators(source)
     result["role"] = extract_roles(source)
-    result["armamenr"] = extract_armament(source)
+    result["armament"] = extract_armament(source)
+    result["propulsion"] = extract_propulsion(source)
+
 
     
 
@@ -174,14 +192,14 @@ def extract_data(source:str)->dict[str, any]:
 if __name__ == "__main__":
     import json
     
-    with open('/Users/amalakhmadinurov/Downloads/Sukhoi Su-27 (Flanker) Air Superiority _ Ground Attack _ Multirole Fighter.html', "r") as file:
+    with open('/Users/amalakhmadinurov/Downloads/Albatros D.II Biplane Fighter.html', "r") as file:
         page_src = file.read()
         data = extract_data(page_src)
         with open("./tmp/result.json", "w+") as result_file:
             json.dump(data, result_file, indent=2)
     
-    with open('/Users/amalakhmadinurov/Downloads/Sukhoi Su-27 (Flanker) Air Superiority _ Ground Attack _ Multirole Fighter.html', "r") as file:
+    with open('/Users/amalakhmadinurov/Downloads/Albatros D.II Biplane Fighter.html', "r") as file:
             page_src = file.read()
-            print(extract_armament(page_src))
+            print(extract_propulsion(page_src))
 
     
