@@ -62,6 +62,7 @@ def _filter_link(link: str, current_link: str) -> bool:
         and clear_link != ""
         and clear_link != "#"
         and current_link not in clear_link
+        and " " not in current_link
     )
 
 

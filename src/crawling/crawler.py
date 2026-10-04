@@ -42,7 +42,18 @@ class Crawler:
         save_list_to_txt(self._unread_links, CRAWLER_UNREAD_LINKS_PATH)
         save_list_to_txt(self._unread_links | self._read_links, CRAWLER_ALL_LINKS_PATH)
         
+    def discard_link(self, link):
+        if link in self._unread_links:
+            self._unread_links.remove(link)
+        if link in self._read_links:
+            self._read_links.remove(link)
+        if link in self._all_links:
+            self._all_links.remove(link)
 
+
+        save_list_to_txt(self._read_links, CRAWLER_READ_LINKS_PATH)
+        save_list_to_txt(self._unread_links, CRAWLER_UNREAD_LINKS_PATH)
+        save_list_to_txt(self._unread_links | self._read_links, CRAWLER_ALL_LINKS_PATH)
 
     def _crawl_link(self,target_link:str)->list[str]:
 
@@ -52,7 +63,10 @@ class Crawler:
         except requests.Timeout:
             log("Failed to retrieve source of the page.Request timed out after retries.", "[CRAWLER]", type="warning")
             return []
-        
+        except requests.exceptions.InvalidURL:
+            log(f"Failed to retrieve source of page. INVALID URL:{target_link} ", "[CRAWLER]", type="warning")
+            self.discard_link(target_link)
+
         extracted_data = extract_data(page_source)
         id, path = save_source_to_html(CRAWLER_RAW_DATA_PATH, page_source, target_link)
 

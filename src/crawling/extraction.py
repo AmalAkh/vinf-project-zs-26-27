@@ -201,5 +201,6 @@ if __name__ == "__main__":
     with open('/Users/amalakhmadinurov/Downloads/Albatros D.II Biplane Fighter.html', "r") as file:
             page_src = file.read()
             print(extract_propulsion(page_src))
+            print(extract_links("<a href=\"https://www.militaryfactory.com/aircraft/ww1-airplanes-1918.asp\" title=\"WW1 Aircraft of 1918\">1918</a>"))
 
     
