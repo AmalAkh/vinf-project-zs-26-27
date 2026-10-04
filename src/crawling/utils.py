@@ -93,8 +93,10 @@ def save_list_to_txt(list:list[str]|set[str], path:str|Path):
 def read_txt_as_list(path:str|Path)->list[str]:
     with open(path, "a+") as file:
         file.seek(0)
-        return file.readlines()
-
+        lines = []
+        for line in file.readlines():
+            lines.append(line.replace("\n", ""))
+        return lines
 
 def build_filename_from_link(link:str):
     id = link.replace(BASE_URL, "")

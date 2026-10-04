@@ -12,7 +12,7 @@ def extract_links(source:str)->list[str]:
     return {match[2]:match[1] for match in matches1}
 
 def extract_title(source:str)->str:
-    main_pattern = r'<h1 class="textJumbo"><span class="textBold">(.+)</span></h1>'
+    main_pattern = r'<h1[^>]*class="[^">]*"[^>]*><span[^">]*class="[^">]*"[^">]*>(.+)</span></h1>'
     match = re.search(main_pattern, source)
     if match is None:
         fallback_pattern = r'<title[^>]*>(.+?)</title>'
@@ -28,8 +28,8 @@ import re
 def extract_description(source: str) -> tuple[str, str]:
     pattern = (
         r'<!--BODYTEXT\d+-->\s*'
-        r'<div class="contentStripOuter[^"]*">.*?'
-        r'<span class="[^"]*">\s*(.*?)\s*</span>.*?'
+        r'<div[^>]*class="[^"]*contentStripOuter[^>]*"[^"]*>.*?'
+        r'<span[^>]*class="[^"]*"[^>]*>\s*(.*?)\s*</span>.*?'
         r'<!--BODYTEXT\d+-->\s*'
     )
 
@@ -71,11 +71,11 @@ def extract_variants(source: str):
 def extract_performance_parameters(source:str):
     pattern = (
         r'<div[^>]*class="specContainerMain[^"]*">\s*'
-        r'<span[^>]*class="textNormal[^">]*">([^<]+)</span>\s*'
+        r'<span[^>]*class="[^">]*textNormal[^">]*">([^<]+)</span>\s*'
         r'<br\s*/?>\s*'
-        r'<span[^>]*class="textBold[^">]*">[^<]+</span>\s*'
+        r'<span[^>]*class="[^">]*textBold[^">]*">[^<]+</span>\s*'
         r'<br\s*/?>\s*'
-        r'<span[^>]*class="textNormal[^">]*">\(([^<]+)\)</span>\s*'
+        r'<span[^>]*class="[^">]*textNormal[^">]*">\(([^<]+)\)</span>\s*'
         r'</div>'
     )
     matches = re.findall(pattern, source, re.DOTALL | re.IGNORECASE)

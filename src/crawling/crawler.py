@@ -54,10 +54,13 @@ class Crawler:
             return []
         
         extracted_data = extract_data(page_source)
-        path = save_source_to_html(CRAWLER_RAW_DATA_PATH, page_source, target_link)
+        id, path = save_source_to_html(CRAWLER_RAW_DATA_PATH, page_source, target_link)
+
+        
         extracted_data["links"] = filter_links(extracted_data["links"], target_link)
         extracted_data["links"] = format_links(extracted_data["links"])
 
+        extracted_data["source_file"] = os.path.basename(path).split('/')[-1]
         extracted_data["source_link"] = target_link
         
         save_parsed_as_json(CRAWLER_PARSED_DATA_PATH, target_link, extracted_data)
