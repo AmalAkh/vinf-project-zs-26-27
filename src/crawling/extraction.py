@@ -23,8 +23,6 @@ def extract_title(source:str)->str:
     return match.group(1)
 
 
-import re
-
 def extract_description(source: str) -> tuple[str, str]:
     pattern = (
         r'<!--BODYTEXT\d+-->\s*'
@@ -62,7 +60,7 @@ def extract_variants(source: str):
     match = re.search(pattern, source, re.DOTALL | re.IGNORECASE)
     
     if match is None:
-        return ""
+        return []
     clearing_pattern = r'</?[^>]+>'
     cleared = re.sub(clearing_pattern,"", match.group(1), 0, re.DOTALL | re.IGNORECASE)
     split_variants = cleared.split("\n")

@@ -19,7 +19,7 @@ CRAWLER_PARSED_DATA_PATH="data/parsed/"
 
 
 class Crawler:
-    def __init__(self, timeout:int=12):
+    def __init__(self, timeout:int=17):
         self.timeout = timeout
 
         self._read_links = set(read_txt_as_list(CRAWLER_READ_LINKS_PATH))
@@ -66,8 +66,20 @@ class Crawler:
         except requests.exceptions.InvalidURL:
             log(f"Failed to retrieve source of page. INVALID URL:{target_link} ", "[CRAWLER]", type="warning")
             self.discard_link(target_link)
+            return []
+        except requests.HTTPError as e:
+            log(f"Failed to retrieve source of page. HTTP error {e} ", "[CRAWLER]", type="warning")
+            return []
+        except Exception as e:
+            log(f"Failed to retrieve source of page. {e} ", "[CRAWLER]", type="warning")
+            return []
 
-        extracted_data = extract_data(page_source)
+        try:
+            extracted_data = extract_data(page_source)
+        except Exception as e: 
+            log(f"Failed to extract data from page. {e} ", "[CRAWLER]", type="warning")
+            self.discard_link(target_link)
+            return []
         id, path = save_source_to_html(CRAWLER_RAW_DATA_PATH, page_source, target_link)
 
         

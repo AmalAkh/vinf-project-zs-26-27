@@ -18,26 +18,33 @@ def get_page_source(url)->str:
         "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36"
     }
   
-    session = requests.Session()
+    with requests.Session() as session:
 
-    retry_strategy = Retry(
-        total=3,
-        backoff_factor=1,
-        status_forcelist=[502, 503, 504],
-    )
+        retry_strategy = Retry(
+            total=3,
+            backoff_factor=1,
+            status_forcelist=[502, 503, 504],
+        )
 
-    adapter = HTTPAdapter(max_retries=retry_strategy)
+        adapter = HTTPAdapter(max_retries=retry_strategy)
 
-    session.mount("https://", adapter)
-    session.mount("http://", adapter)
+        session.mount("https://", adapter)
+        session.mount("http://", adapter)
 
 
-    response = session.get(
-        url=url,
-        timeout=(3, 7),
-        headers=headers
-    )
-    return response.text
+        response = session.get(
+            url=url,
+            timeout=(5, 10),
+            headers=headers
+        )
+        response.raise_for_status()
+
+        content_type = response.headers.get("Content-Type", "").lower()
+
+        if "text/html" not in content_type:
+            raise ValueError(f"Unexpected content type: {content_type}")
+
+        return response.text
 
 
         
