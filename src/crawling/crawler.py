@@ -19,13 +19,15 @@ CRAWLER_PARSED_DATA_PATH="data/parsed/"
 
 
 class Crawler:
-    def __init__(self, timeout:int=17):
+    def __init__(self, timeout:int=12):
         self.timeout = timeout
 
         self._read_links = set(read_txt_as_list(CRAWLER_READ_LINKS_PATH))
-        self._unread_links = set(read_txt_as_list(CRAWLER_UNREAD_LINKS_PATH))
+        self._unread_links = (set(read_txt_as_list(CRAWLER_UNREAD_LINKS_PATH)) - self._read_links)
         self._all_links = set(read_txt_as_list(CRAWLER_ALL_LINKS_PATH))
 
+        print(self._unread_links)
+        
     def _save_read_link(self, target_link:str):
         
         self._read_links.add(target_link)
@@ -37,8 +39,7 @@ class Crawler:
         save_list_to_txt(self._unread_links | self._read_links, CRAWLER_ALL_LINKS_PATH)
 
     def _save_unread_links(self, links:list[str]):
-        for link in links:
-            self._unread_links.add(link)
+        self._unread_links |=  ( set(links) - self.self._read_links )
         save_list_to_txt(self._unread_links, CRAWLER_UNREAD_LINKS_PATH)
         save_list_to_txt(self._unread_links | self._read_links, CRAWLER_ALL_LINKS_PATH)
         
@@ -69,6 +70,8 @@ class Crawler:
             return []
         except requests.HTTPError as e:
             log(f"Failed to retrieve source of page. HTTP error {e} ", "[CRAWLER]", type="warning")
+            if e.response.status_code == 404:
+                self.discard_link(target_link)
             return []
         except Exception as e:
             log(f"Failed to retrieve source of page. {e} ", "[CRAWLER]", type="warning")
