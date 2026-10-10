@@ -15,21 +15,35 @@ from src.indexing.tokenize import prepare_for_indexing
 class TextIndex:
     def __init__(self, path:str|Path):
 
-        with open(os.path.join(path, "index.json"), "w") as file:
+        with open(os.path.join(path, "index.json"), "r") as file:
             self.index = json.load(file)
                 
-        with open(os.path.join(path, "tokens_to_num"), "r") as file:
+        with open(os.path.join(path, "tokens_to_num.json"), "r") as file:
             self.tokens_to_num = json.load(file)
 
         with open(os.path.join(path,"num_to_token.json"), "r") as file:
             self.num_to_token = json.load(file)
 
-        with open(os.path.join("document_mapping.json"), "r") as file:
+        with open(os.path.join(path,"document_mapping.json"), "r") as file:
             self.document_mapping = json.load(file)
 
-        with open(os.path.join("reverse_document_mapping.json"), "r") as file:
+        with open(os.path.join(path,"reverse_document_mapping.json"), "r") as file:
             self.reverse_document_mapping = json.load(file)
-                  
+
+        with open(os.path.join(path,"tokenized.json"), "r") as file:
+            self.tokenized_documents = json.load(file)
+
+    def get_documents_with_term(self, token:int)->list[int]:
+        return self.index[str(token)]["pages"]
+
+    def get_document(self, document_id:int)->list[int]:
+        return self.tokenized_documents[str(document_id)] 
+    
+    def get_documents_count(self)->int:
+        return len(self.document_mapping.keys())
+    
+    def get_document_filename(self, id:int)->str:
+        return self.reverse_document_mapping[id]
 
 class Indexer:
 
@@ -37,33 +51,38 @@ class Indexer:
         self.input_path = input_path
         self.output_path = output_path
 
-        self.token_to_num = dict()
-        self.num_to_token = []
-        self.document_mapping = []
-        self.reverse_document_mapping = []
+        self._token_to_num = dict()
+        self._num_to_token = []
+        self._document_mapping = []
+        self.r_everse_document_mapping = []
+
+        self._tokenized_documents = {}
 
 
-        self.index_data = {}
+        self._index_data = {}
 
     def _index_page(self, page_id:int, text:str):
 
         tokens = prepare_for_indexing(text)
-
+        num_tokens = []
         for token  in tokens:
-            if token not in self.token_to_num:
-                token_idx = len(self.num_to_token)
-                self.token_to_num[token] = token_idx
-                self.num_to_token.append(token)
+            if token not in self._token_to_num:
+                token_idx = len(self._num_to_token)
+                self._token_to_num[token] = token_idx
+                self._num_to_token.append(token)
             else:
-                token_idx = self.token_to_num[token]
+                token_idx = self._token_to_num[token]
+                
+            num_tokens.append(token_idx)
 
-            if token_idx not in self.index_data:
-                self.index_data[token_idx] = {"freq":0, "pages":set()}
+            if token_idx not in self._index_data:
+                self._index_data[token_idx] = {"freq":0, "pages":set()}
 
-            if page_id not in self.index_data[token_idx]:
-                self.index_data[token_idx]["pages"].add(page_id)
-                self.index_data[token_idx]["freq"]+=tokens.count(token)
+            if page_id not in self._index_data[token_idx]:
+                self._index_data[token_idx]["pages"].add(page_id)
+                self._index_data[token_idx]["freq"]+=tokens.count(token)
 
+        self._tokenized_documents[page_id] = num_tokens
 
     def _sort_index(self):
         pass
@@ -96,19 +115,22 @@ class Indexer:
     def save_index(self):
        
         with open(os.path.join(self.output_path,"index.json"), "w") as file:
-            json.dump(self.index_data, file, indent=2, default=set_default)
+            json.dump(self._index_data, file, indent=2, default=set_default)
         
         with open(os.path.join(self.output_path, "tokens_to_num.json"), "w") as file:
-            json.dump(self.token_to_num, file, indent=2)
+            json.dump(self._token_to_num, file, indent=2)
 
         with open(os.path.join(self.output_path, "num_to_token.json"), "w") as file:
-            json.dump(self.num_to_token, file, indent=2)
+            json.dump(self._num_to_token, file, indent=2)
 
-        with open(os.path.join(self.output_path,"document_mapping.json"), "w") as file:
+        with open(os.path.join(self.output_path, "document_mapping.json"), "w") as file:
             json.dump(self._document_mapping, file, indent=2)
 
-        with open(os.path.join(self.output_path,"reverse_document_mapping.json"), "w") as file:
+        with open(os.path.join(self.output_path, "reverse_document_mapping.json"), "w") as file:
             json.dump(self._reverse_document_mapping, file, indent=2)
+
+        with open(os.path.join(self.output_path, "tokenized.json"), "w") as file:
+            json.dump(self._tokenized_documents, file, indent=2)
         
 def set_default(obj):
     if isinstance(obj, set):
@@ -117,4 +139,6 @@ def set_default(obj):
 if __name__ == "__main__":
     indexer = Indexer("./data/parsed", "./data/index")
     indexer.index()
+
+    index = TextIndex("./data/index")
 

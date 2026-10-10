@@ -15,6 +15,9 @@ def remove_double_spaces(text:str):
 def tokenize(text:str)->list[str]:
     return text.split(" ")
 
+def convert_string_tokens_to_num(string_tokens:list[str], mapping:dict[str,int])->list[int]:
+    return [mapping[token] for token in string_tokens]
+
 def prepare_for_indexing(text:str):
     prepared = remove_punctuations(text)
     prepared = remove_stop_words(prepared)
