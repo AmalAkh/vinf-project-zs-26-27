@@ -34,7 +34,10 @@ class TextIndex:
             self.tokenized_documents = json.load(file)
 
     def get_documents_with_term(self, token:int)->list[int]:
-        return self.index[str(token)]["pages"]
+        try:
+            return self.index[str(token)]["pages"]
+        except KeyError:
+            return []
 
     def get_document(self, document_id:int)->list[int]:
         return self.tokenized_documents[str(document_id)] 
@@ -106,12 +109,13 @@ class Indexer:
                 if page["content_clear"] == "":
                     continue
                 
-                self._index_page(idx, page["content_clear"])
+                self._index_page(idx, self._generate_full_text_for_indexing(page))
                 
                 print(f"Processed: {idx+1}")
         if save_index:
             self.save_index()
-
+    def _generate_full_text_for_indexing(self, record:dict[str,any]):
+        return f"{record["title"]} {record["content_clear"]} {'\n'.join(record["variants"])}"
     def save_index(self):
        
         with open(os.path.join(self.output_path,"index.json"), "w") as file:
