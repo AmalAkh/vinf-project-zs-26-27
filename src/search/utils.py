@@ -10,8 +10,8 @@ def augmented_tf_idf(t_in_d:int, words_in_d:int, document_num:int, document_with
     return (0.5 + 0.5*(t_in_d/words_in_d))*math.log10(document_num/document_with_t_num)
 
 
-def compute_norm_term(tf_idf_vector):
-    pass 
+def compute_norm_term(tf_idf_vector:list[int]):
+    return sum(tf_idf_vector)
 
 def get_title_by_filename(filename:str, folder:str|Path):
     with open(os.path.join(folder, filename), 'r') as file:

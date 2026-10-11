@@ -49,18 +49,42 @@ class SearchEngine:
                 elif mode == "cosine":
                     score = augmented_tf_idf(occurances, len(document), self._index.get_documents_count(), len(relevant_documents_ids))
 
-                scores[id] = scores.get(id, 0)+score
                 
+                vector = scores.get(id, [])
+                vector.append(score)
+                scores[id] = vector
+
+        for id in scores:
+            if mode == "cosine":
+                scores[id] = sum(scores[id])*compute_norm_term(scores[id])
+            else:
+                scores[id] = sum(scores[id])
       
         sorted_scores = [(self._index.get_document_filename(id), value)  for id, value in sorted(scores.items(), key=lambda x:x[1], reverse=True)]
-        print(sorted_scores)
-        return sorted_scores[:100]
 
+        result = self._remove_duplicated_pages(sorted_scores)
+        return result[:10]
+    
+    def _remove_duplicated_pages(self, scores: list):
+        deduplicated_result = []
+        seen = set()
+
+        for filename, score in scores:
+            normalized = filename.replace("_asp", "")
+
+            if normalized in seen:
+                continue
+
+            seen.add(normalized)
+            deduplicated_result.append((filename, score))
+
+        return deduplicated_result
+    
 if __name__ == "__main__":
     engine = SearchEngine()
     parsed_files_folder = "./data/parsed"
-    results = engine.search("soviet aircraft for ground-attack cold war", mode="standard")
-
+    results = engine.search("A-10", mode="cosine")
+    print()
     for idx, result in enumerate(results):
         print(f"{idx+1}. {result[1]} {get_title_by_filename(result[0], parsed_files_folder)}")
     print()
