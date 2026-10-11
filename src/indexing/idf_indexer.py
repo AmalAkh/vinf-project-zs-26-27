@@ -83,7 +83,7 @@ class Indexer:
 
             if page_id not in self._index_data[token_idx]:
                 self._index_data[token_idx]["pages"].add(page_id)
-                self._index_data[token_idx]["freq"]+=tokens.count(token)
+                self._index_data[token_idx]["freq"]+=1
 
         self._tokenized_documents[page_id] = num_tokens
 
