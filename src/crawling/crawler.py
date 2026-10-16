@@ -7,7 +7,7 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from src.crawling.extraction import extract_data
+from extraction.extractors import extract_links
 from src.crawling.utils import get_page_source, filter_links, save_list_to_txt, read_txt_as_list, format_links, save_source_to_html, save_parsed_as_json
 from src.utils.logging import log
 
@@ -78,7 +78,7 @@ class Crawler:
             return []
 
         try:
-            extracted_data = extract_data(page_source)
+            extracted_links = extract_links(page_source)
         except Exception as e: 
             log(f"Failed to extract data from page. {e} ", "[CRAWLER]", type="warning")
             self.discard_link(target_link)
@@ -86,18 +86,18 @@ class Crawler:
         id, path = save_source_to_html(CRAWLER_RAW_DATA_PATH, page_source, target_link)
 
         
-        extracted_data["links"] = filter_links(extracted_data["links"], target_link)
-        extracted_data["links"] = format_links(extracted_data["links"])
+        extracted_links = filter_links(extracted_links, target_link)
+        extracted_links = format_links(extracted_links)
 
-        extracted_data["source_file"] = os.path.basename(path).split('/')[-1]
-        extracted_data["source_link"] = target_link
+        extracted_links = os.path.basename(path).split('/')[-1]
+        extracted_links = target_link
         
-        save_parsed_as_json(CRAWLER_PARSED_DATA_PATH, target_link, extracted_data)
+        
 
         self._save_read_link(target_link)
-        self._save_unread_links(extracted_data["links"].values())
+        self._save_unread_links(extracted_links)
 
-        return extracted_data["links"]
+        return extracted_links
     
     def _crawl_links(self, start_links:list[str]):
         result_links = []
@@ -123,7 +123,7 @@ class Crawler:
 
 if __name__ == "__main__":
     crawler = Crawler()
-    print(crawler.crawl_source(["https://www.militaryfactory.com/aircraft/ww1-aircraft.php"]))
+    crawler.crawl_source(["https://www.militaryfactory.com/aircraft/ww1-aircraft.php"])
         
 
 

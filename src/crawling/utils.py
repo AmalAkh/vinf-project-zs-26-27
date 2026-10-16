@@ -1,6 +1,4 @@
 import requests
-from selenium import webdriver
-from selenium.webdriver.common.by import By
 from pathlib import Path
 import urllib
 import uuid
@@ -123,11 +121,3 @@ def save_source_to_html(folder:Path|str, source:str, link:str)->tuple[str,str]:
 def load_html_source(path:Path|str, source:str):
     with open(path, "w+") as file:
         return file.read(source)
-
-def save_parsed_as_json(folder:Path|str,original_link:str, data:dict[str,any]):
-    id = build_filename_from_link(original_link)
-    path = os.path.join(folder, id+".json")
-    with open(path, "w+") as file:
-        json.dump(data, file, indent=2)
-    return id
-
