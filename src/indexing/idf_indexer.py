@@ -12,6 +12,7 @@ sys.path.insert(0, str(PROJECT_ROOT))
 
 from src.indexing.tokenize import prepare_for_indexing
 from src.search.utils import idf, compute_tf_idf_score, TF_MODE
+
 class TextIndex:
     def __init__(self, path:str|Path):
 
@@ -99,8 +100,7 @@ class Indexer:
 
         self._tokenized_documents[page_id] = num_tokens
         
-    def _sort_index(self):
-        pass
+
 
     def _create_document_mapping(self, filenames_ids:list[str]):
         sorted_ids = sorted(filenames_ids)

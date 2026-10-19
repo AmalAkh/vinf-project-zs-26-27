@@ -24,7 +24,7 @@ class SearchEngine:
         self._index = TextIndex("./data/index")
 
     
-    def search(self, query:str, tf_mode:TF_MODE = "natural", use_cosine:bool=False, normalize:bool=True):
+    def search(self, query:str, tf_mode:TF_MODE = "natural", tf_norm_mode:TF_NORM_MODE="none", use_cosine:bool=False, normalize:bool=True):
         query_tokens = list(set(prepare_for_indexing(query.lower())))
         
         numerical_tokens = convert_string_tokens_to_num(query_tokens, self._index.tokens_to_num)
@@ -62,7 +62,7 @@ class SearchEngine:
         scores = {}
         for doc_id in idfs:
             
-            scores[doc_id] = compute_tf_idf_score(tfs[doc_id], idfs[doc_id], doc_lengths[doc_id], tf_mode)
+            scores[doc_id] = compute_tf_idf_score(tfs[doc_id], idfs[doc_id], doc_lengths[doc_id], tf_mode, tf_norm_mode)
 
         final_scores = {}
         for id, doc_scores in scores.items():

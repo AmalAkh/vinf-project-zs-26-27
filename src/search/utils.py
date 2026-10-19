@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Literal
 
 TF_MODE = Literal["natural","norm_length", "log", "norm_max", "log_avg", "boolean"]
+TF_NORM_MODE = Literal["none","norm_length", "norm_max"]
 
 
 TF_IDF_NORM_MODE = Literal["none", "euclid"]
@@ -32,11 +33,24 @@ def log_avg_tf_idf(tf:float|int, avg_tf:float):
 
 
 
-def compute_tf_idf_score(tfs:dict[int, float],idfs:list[int, float], document_length:int, tf_mode:TF_MODE):
+def compute_tf_idf_score(tfs:dict[int, float],idfs:list[int, float], document_length:int, tf_mode:TF_MODE, tf_norm_mode:TF_NORM_MODE):
+    norm_tfs = {}
+    if tf_mode == "norm_max":
+        max_tf = max(tfs.values())
+        for token in tfs:
+            norm_tfs[token] = tf_norm_max(tfs[token], max_tf)
+
+    elif tf_mode == "norm_length":
+        for token in tfs:
+            norm_tfs[token] = tf_norm_length(tfs[token], document_length)
+    else:
+        norm_tfs = tfs.copy()
+        
+    
     if tf_mode == "log":
         scores = {
             token: log_tf(tf) * idfs[token]
-            for token, tf in tfs.items()
+            for token, tf in norm_tfs.items()
         }
 
     elif tf_mode == "log_avg":
@@ -44,33 +58,19 @@ def compute_tf_idf_score(tfs:dict[int, float],idfs:list[int, float], document_le
 
         scores = {
             token: log_avg_tf_idf(tf, avg) * idfs[token]
-            for token, tf in tfs.items()
-        }
-
-    elif tf_mode == "norm_max":
-        max_tf = max(tfs.values())
-
-        scores = {
-            token: tf_norm_max(tf, max_tf) * idfs[token]
-            for token, tf in tfs.items()
-        }
-
-    elif tf_mode == "norm_length":
-        scores = {
-            token: tf_norm_length(tf, document_length) * idfs[token]
-            for token, tf in tfs.items()
+            for token, tf in norm_tfs.items()
         }
 
     elif tf_mode == "boolean":
         scores = {
             token: 1 * idfs[token]
-            for token, tf in tfs.items()
+            for token, tf in norm_tfs.items()
         }
 
     else:
         scores = {
             token: tf * idfs[token]
-            for token, tf in tfs.items()
+            for token, tf in norm_tfs.items()
         }
     return scores
 
