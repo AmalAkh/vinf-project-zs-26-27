@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 from typing import Literal
 
-TF_MODE = Literal["natural","norm_length", "log", "norm_max", "log_avg", "boolean"]
+TF_MODE = Literal["natural", "log", "log_avg", "boolean"]
 TF_NORM_MODE = Literal["none","norm_length", "norm_max"]
 
 
@@ -35,12 +35,12 @@ def log_avg_tf_idf(tf:float|int, avg_tf:float):
 
 def compute_tf_idf_score(tfs:dict[int, float],idfs:list[int, float], document_length:int, tf_mode:TF_MODE, tf_norm_mode:TF_NORM_MODE):
     norm_tfs = {}
-    if tf_mode == "norm_max":
+    if tf_norm_mode == "norm_max":
         max_tf = max(tfs.values())
         for token in tfs:
             norm_tfs[token] = tf_norm_max(tfs[token], max_tf)
 
-    elif tf_mode == "norm_length":
+    elif tf_norm_mode == "norm_length":
         for token in tfs:
             norm_tfs[token] = tf_norm_length(tfs[token], document_length)
     else:

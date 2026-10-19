@@ -122,7 +122,7 @@ class SearchEngine:
 if __name__ == "__main__":
     engine = SearchEngine()
     parsed_files_folder = "./data/parsed"
-    results = engine.search("Sukhoi fighter jet 5th generation", tf_mode="log", use_cosine=False)
+    results = engine.search("Sukhoi fighter jet 5th generation", tf_mode="log", tf_norm_mode="none", use_cosine=False)
     print()
     for idx, result in enumerate(results):
         print(f"{idx+1}. {result[1]} {get_title_by_filename(result[0], parsed_files_folder)}")
