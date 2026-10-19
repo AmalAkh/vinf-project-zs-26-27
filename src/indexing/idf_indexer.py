@@ -11,7 +11,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
 from src.indexing.tokenize import prepare_for_indexing
-
+from src.search.utils import idf, compute_tf_idf_score, TF_MODE
 class TextIndex:
     def __init__(self, path:str|Path):
 
@@ -32,7 +32,7 @@ class TextIndex:
 
         with open(os.path.join(path,"tokenized.json"), "r") as file:
             self.tokenized_documents = json.load(file)
-
+    
     def get_documents_with_term(self, token:int)->list[int]:
         try:
             return self.index[str(token)]["pages"]
@@ -48,6 +48,19 @@ class TextIndex:
     def get_document_filename(self, id:int)->str:
         return self.reverse_document_mapping[id]
 
+    def get_document_full_vector(self, doc_id:int, tf_mode:TF_MODE):
+        document = self.tokenized_documents[str(doc_id)] 
+        tfs = {}
+        idfs = {}
+
+        for token in document:
+            relevant_documents_ids = self.index[str(token)]["pages"]
+            tfs[token] = document.count(tfs)
+            idf_val = idf(self.get_documents_count(), len(relevant_documents_ids))
+            idfs[token] = idf_val
+            
+        return compute_tf_idf_score(tfs, idfs, len(document), tf_mode=tf_mode)
+
 class Indexer:
 
     def __init__(self, input_path:str, output_path:str):
@@ -57,13 +70,13 @@ class Indexer:
         self._token_to_num = dict()
         self._num_to_token = []
         self._document_mapping = []
-        self.r_everse_document_mapping = []
+        self._reverse_document_mapping = []
 
         self._tokenized_documents = {}
 
 
         self._index_data = {}
-
+        self._doc_vec_length = {}
     def _index_page(self, page_id:int, text:str):
 
         tokens = prepare_for_indexing(text)
@@ -79,14 +92,13 @@ class Indexer:
             num_tokens.append(token_idx)
 
             if token_idx not in self._index_data:
-                self._index_data[token_idx] = {"freq":0, "pages":set()}
+                self._index_data[token_idx] = {"pages":set()}
 
             if page_id not in self._index_data[token_idx]:
                 self._index_data[token_idx]["pages"].add(page_id)
-                self._index_data[token_idx]["freq"]+=1
 
         self._tokenized_documents[page_id] = num_tokens
-
+        
     def _sort_index(self):
         pass
 
@@ -97,7 +109,7 @@ class Indexer:
 
     def index(self, save_index:bool=True):
         self._create_document_mapping(os.listdir(self.input_path))
-       
+        count_processed = 0
         for idx, filename in enumerate(self._reverse_document_mapping):
             with open(os.path.join(self.input_path, filename), 'r', encoding="utf-8") as f:
                 try:
@@ -108,12 +120,14 @@ class Indexer:
 
                 if page["content_clear"] == "":
                     continue
+                count_processed+=1
+                print(f"Processed: {count_processed}")
                 
                 self._index_page(idx, self._generate_full_text_for_indexing(page))
-                
-                print(f"Processed: {idx+1}")
+
         if save_index:
             self.save_index()
+
     def _generate_full_text_for_indexing(self, record:dict[str,any]):
         return f"{record["title"]} {record["content_clear"]} {'\n'.join(record["variants"])}"
     def save_index(self):

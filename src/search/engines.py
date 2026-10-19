@@ -7,7 +7,7 @@ import os
 import time
 from pathlib import Path
 from typing import Literal
-
+from collections import Counter
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
@@ -15,8 +15,7 @@ from src.indexing.idf_indexer import TextIndex
 from src.indexing.tokenize import prepare_for_indexing, convert_string_tokens_to_num
 from src.search.utils import *
 
-TF_MODE = Literal["natural","norm_length", "log", "norm_max", "log_avg"]
-TF_IDF_NORM_MODE = Literal["none", "euclid"]
+
 
 
 class SearchEngine:
@@ -25,57 +24,82 @@ class SearchEngine:
         self._index = TextIndex("./data/index")
 
     
-    def search(self, query:str, tf_mode:TF_MODE = "natural", normalize:bool=True):
-        query_tokens = prepare_for_indexing(query)
+    def search(self, query:str, tf_mode:TF_MODE = "natural", use_cosine:bool=False, normalize:bool=True):
+        query_tokens = list(set(prepare_for_indexing(query.lower())))
         
         numerical_tokens = convert_string_tokens_to_num(query_tokens, self._index.tokens_to_num)
-        
+      
         tfs = {}
         idfs = {}
-        doc_lenths = {}
+        doc_lengths = {}
+
+        query_tfs = dict(Counter(numerical_tokens))
+        query_idfs = {}
+
         
         for token in numerical_tokens:
             relevant_documents_ids = self._index.get_documents_with_term(token)
+            idf_val = idf(self._index.get_documents_count(), len(relevant_documents_ids))
+            query_idfs[token] = idf_val
 
-            
-
-           
-            if len(relevant_documents_ids) > 0:
-                print(token)
             for id in relevant_documents_ids:
                 document = self._index.get_document(id)
                 occurances = document.count(token)
 
                 
-                doc_tfs = tfs.get(id, []) 
-                doc_tfs.append(occurances)
+                doc_tfs = tfs.get(id, {}) 
+                doc_tfs[token] = occurances
                 tfs[id] = doc_tfs
 
-                doc_idfs = idfs.get(id, []) 
-                doc_idfs.append(idf(self._index.get_documents_count(), len(relevant_documents_ids)))
+                doc_idfs = idfs.get(id, {}) 
+                doc_idfs[token] = idf_val
                 idfs[id] = doc_idfs
 
-                doc_lenths[id] = len(document)
-
-                
-              
+                doc_lengths[id] = len(document)
+            
+           
 
         scores = {}
-        for id in idfs:
-            if tf_mode == "log":
-                scores[id] = sum([log_tf(tf)*idf for tf, idf in zip(tfs[id], idfs[id])])
-            if tf_mode == "log_avg":
-                avg = sum(tfs[id])/len(tfs[id])
-                scores[id] = sum([log_avg_tf_idf(tf,  avg)*idf for tf, idf in zip(tfs[id], idfs[id])])
-            if tf_mode == "norm_max":
-                scores[id] = sum([tf_norm_max(tf,  max(tfs[id]))*idf for tf, idf in zip(tfs[id], idfs[id])])
-            if tf_mode == "norm_length":
-                scores[id] = sum([tf_norm_length(tf, doc_lenths[id])*idf for tf, idf in zip(tfs[id], idfs[id])])
-            else:
-                scores[id] = sum([tf*idf for tf, idf in zip(tfs[id], idfs[id])])
-    
+        for doc_id in idfs:
+            
+            scores[doc_id] = compute_tf_idf_score(tfs[doc_id], idfs[doc_id], doc_lengths[doc_id], tf_mode)
 
-        sorted_scores = [(self._index.get_document_filename(id), value)  for id, value in sorted(scores.items(), key=lambda x:x[1], reverse=True)]
+        final_scores = {}
+        for id, doc_scores in scores.items():
+            if use_cosine:
+
+                query_scores = {
+                    token: tf_val * query_idfs[token]
+                    for token, tf_val in query_tfs.items()
+                }
+        
+                query_norm = math.sqrt(
+                    sum(weight ** 2 for weight in query_scores.values())
+                )
+                dot_product = sum(
+                    query_weight * doc_scores.get(token, 0)
+                    for token, query_weight in query_scores.items()
+                )
+
+                # Full document magnitude (precomputed during indexing)
+                document_norm = math.sqrt(
+                    sum(
+                        weight**2 for weight in doc_scores
+                    )
+                )
+
+                if query_norm == 0 or document_norm == 0:
+                    final_scores[id] = 0.0
+                else:
+                    final_scores[id] = (
+                        dot_product / (query_norm * document_norm)
+                    )
+                
+            else:
+                final_scores[id] = sum(scores[id].values())
+                
+
+        sorted_scores = [(self._index.get_document_filename(id), value)  for id, value in sorted(final_scores.items(), key=lambda x:x[1], reverse=True)]
       
         result = self._remove_duplicated_pages(sorted_scores)
         return result[:10]
@@ -98,7 +122,7 @@ class SearchEngine:
 if __name__ == "__main__":
     engine = SearchEngine()
     parsed_files_folder = "./data/parsed"
-    results = engine.search("soviet Fighter jet with NATO codename Fulcrum", tf_mode="log_avg")
+    results = engine.search("Sukhoi fighter jet 5th generation", tf_mode="log", use_cosine=False)
     print()
     for idx, result in enumerate(results):
         print(f"{idx+1}. {result[1]} {get_title_by_filename(result[0], parsed_files_folder)}")

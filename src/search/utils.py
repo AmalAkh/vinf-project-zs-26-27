@@ -2,7 +2,12 @@ import math
 import os
 import json
 from pathlib import Path
+from typing import Literal
 
+TF_MODE = Literal["natural","norm_length", "log", "norm_max", "log_avg", "boolean"]
+
+
+TF_IDF_NORM_MODE = Literal["none", "euclid"]
 
 def tf_norm_length(tf:int, document_length:int):
     return (tf/document_length)
@@ -27,7 +32,47 @@ def log_avg_tf_idf(tf:float|int, avg_tf:float):
 
 
 
+def compute_tf_idf_score(tfs:dict[int, float],idfs:list[int, float], document_length:int, tf_mode:TF_MODE):
+    if tf_mode == "log":
+        scores = {
+            token: log_tf(tf) * idfs[token]
+            for token, tf in tfs.items()
+        }
 
+    elif tf_mode == "log_avg":
+        avg = sum(tfs.values()) / len(tfs)
+
+        scores = {
+            token: log_avg_tf_idf(tf, avg) * idfs[token]
+            for token, tf in tfs.items()
+        }
+
+    elif tf_mode == "norm_max":
+        max_tf = max(tfs.values())
+
+        scores = {
+            token: tf_norm_max(tf, max_tf) * idfs[token]
+            for token, tf in tfs.items()
+        }
+
+    elif tf_mode == "norm_length":
+        scores = {
+            token: tf_norm_length(tf, document_length) * idfs[token]
+            for token, tf in tfs.items()
+        }
+
+    elif tf_mode == "boolean":
+        scores = {
+            token: 1 * idfs[token]
+            for token, tf in tfs.items()
+        }
+
+    else:
+        scores = {
+            token: tf * idfs[token]
+            for token, tf in tfs.items()
+        }
+    return scores
 
 
 def get_title_by_filename(filename:str, folder:str|Path):
