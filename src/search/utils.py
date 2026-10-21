@@ -4,8 +4,7 @@ import json
 from pathlib import Path
 from typing import Literal
 
-TF_MODE = Literal["natural", "log", "log_avg", "boolean"]
-TF_NORM_MODE = Literal["none","norm_length", "norm_max"]
+TF_MODE = Literal["natural", "log", "log_avg", "boolean", "norm_max", "norm_length"]
 
 
 TF_IDF_NORM_MODE = Literal["none", "euclid"]
@@ -33,24 +32,13 @@ def log_avg_tf_idf(tf:float|int, avg_tf:float):
 
         
 
-def compute_tf_idf_score(tfs:dict[int, float],idfs:list[int, float], document_length:int, tf_mode:TF_MODE, tf_norm_mode:TF_NORM_MODE):
-    norm_tfs = {}
-    if tf_norm_mode == "norm_max":
-        max_tf = max(tfs.values())
-        for token in tfs:
-            norm_tfs[token] = tf_norm_max(tfs[token], max_tf)
-
-    elif tf_norm_mode == "norm_length":
-        for token in tfs:
-            norm_tfs[token] = tf_norm_length(tfs[token], document_length)
-    else:
-        norm_tfs = tfs.copy()
-        
+def compute_tf_idf_score(tfs:dict[int, float],idfs:list[int, float], document_length:int, tf_mode:TF_MODE):
     
+      
     if tf_mode == "log":
         scores = {
             token: log_tf(tf) * idfs[token]
-            for token, tf in norm_tfs.items()
+            for token, tf in tfs.items()
         }
 
     elif tf_mode == "log_avg":
@@ -58,19 +46,30 @@ def compute_tf_idf_score(tfs:dict[int, float],idfs:list[int, float], document_le
 
         scores = {
             token: log_avg_tf_idf(tf, avg) * idfs[token]
-            for token, tf in norm_tfs.items()
+            for token, tf in tfs.items()
         }
 
     elif tf_mode == "boolean":
         scores = {
             token: (1 if tf > 0 else 0) * idfs[token]
-            for token, tf in norm_tfs.items()
+            for token, tf in tfs.items()
         }
+    elif tf_mode == "norm_max":
+        max_tf = max(tfs.values())
+        scores = {
+            token: tf_norm_max(tf, max_tf) * idfs[token]
+            for token, tf in tfs.items()
+        }   
 
+    elif tf_mode == "norm_length":
+        scores = {
+            token: tf_norm_length(tf, document_length) * idfs[token]
+            for token, tf in tfs.items()
+        }  
     else:
         scores = {
             token: tf * idfs[token]
-            for token, tf in norm_tfs.items()
+            for token, tf in tfs.items()
         }
     return scores
 

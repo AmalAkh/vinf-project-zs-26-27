@@ -24,7 +24,7 @@ class SearchEngine:
         self._index = TextIndex("./data/index")
 
     
-    def search(self, query:str, tf_mode:TF_MODE = "natural", tf_norm_mode:TF_NORM_MODE="none", query_mode:QUERY_MODE="or", use_cosine:bool=False, normalize:bool=True):
+    def search(self, query:str, tf_mode:TF_MODE = "natural", query_mode:QUERY_MODE="or", use_cosine:bool=False, normalize:bool=True):
         query_tokens = list(set(prepare_for_indexing(query.lower())))
         
         numerical_tokens = convert_string_tokens_to_num(query_tokens, self._index.tokens_to_num)
@@ -69,7 +69,7 @@ class SearchEngine:
         scores = {}
         for doc_id in idfs:
             
-            scores[doc_id] = compute_tf_idf_score(tfs[doc_id], idfs[doc_id], doc_lengths[doc_id], tf_mode, tf_norm_mode)
+            scores[doc_id] = compute_tf_idf_score(tfs[doc_id], idfs[doc_id], doc_lengths[doc_id], tf_mode)
 
         final_scores = {}
         for id, doc_scores in scores.items():
@@ -129,8 +129,8 @@ class SearchEngine:
 if __name__ == "__main__":
     engine = SearchEngine()
     parsed_files_folder = "./data/parsed"
-    results = engine.search("Fighter and Fulcrum-D", tf_mode="log", tf_norm_mode="none", use_cosine=True)
+    results = engine.search("Fighter jet with NATO codename Fulcrum", query_mode="or", tf_mode="natural", use_cosine=False)
     print()
     for idx, result in enumerate(results):
-        print(f"{idx+1}. {result[1]} {get_title_by_filename(result[0], parsed_files_folder)}")
+        print(f"{idx+1}. {result[1]:4f} {get_title_by_filename(result[0], parsed_files_folder)}")
     print()
