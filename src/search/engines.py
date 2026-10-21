@@ -39,9 +39,9 @@ class SearchEngine:
         if query_mode == "and":
             relevant_documents_ids = self._index.get_documents_with_terms_and(numerical_tokens)
         elif query_mode == "or":
-            relevant_documents_ids = self._index.get_documents_with_terms_and(numerical_tokens)
+            relevant_documents_ids = self._index.get_documents_with_terms_or(numerical_tokens)
         else:
-            relevant_documents_ids = self._index.get_documents_with_terms_and(numerical_tokens)
+            relevant_documents_ids = self._index.get_documents_with_terms_or(numerical_tokens)
 
 
         for token in numerical_tokens:
@@ -91,7 +91,7 @@ class SearchEngine:
                 # Full document magnitude (precomputed during indexing)
                 document_norm = math.sqrt(
                     sum(
-                        weight**2 for weight in doc_scores
+                        weight**2 for weight in self._index.get_document_full_vector(doc_id, tf_mode)
                     )
                 )
 
@@ -129,7 +129,7 @@ class SearchEngine:
 if __name__ == "__main__":
     engine = SearchEngine()
     parsed_files_folder = "./data/parsed"
-    results = engine.search("Fighter and Fulcrum-D", tf_mode="log", tf_norm_mode="none", use_cosine=False)
+    results = engine.search("Fighter and Fulcrum-D", tf_mode="log", tf_norm_mode="none", use_cosine=True)
     print()
     for idx, result in enumerate(results):
         print(f"{idx+1}. {result[1]} {get_title_by_filename(result[0], parsed_files_folder)}")

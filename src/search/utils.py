@@ -31,7 +31,7 @@ def log_tf(tf:float|int):
 def log_avg_tf_idf(tf:float|int, avg_tf:float):
     return (1+math.log10(tf))/(1+math.log10(avg_tf))
 
-
+        
 
 def compute_tf_idf_score(tfs:dict[int, float],idfs:list[int, float], document_length:int, tf_mode:TF_MODE, tf_norm_mode:TF_NORM_MODE):
     norm_tfs = {}
@@ -63,7 +63,7 @@ def compute_tf_idf_score(tfs:dict[int, float],idfs:list[int, float], document_le
 
     elif tf_mode == "boolean":
         scores = {
-            token: 1 * idfs[token]
+            token: (1 if tf > 0 else 0) * idfs[token]
             for token, tf in norm_tfs.items()
         }
 
