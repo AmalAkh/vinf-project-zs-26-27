@@ -26,4 +26,4 @@ def prepare_for_indexing(text:str):
     return tokenize(prepared)
 
 if __name__ == "__main__":
-    print(prepare_for_indexing('The A-10 Thunderbolt II was designed exclusively to fulfill the Close-Air Support (CAS) role from the outset'))
+    print(prepare_for_indexing('Mikoyan MiG-35 (Fulcrum-F)'))

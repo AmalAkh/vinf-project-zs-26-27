@@ -47,7 +47,7 @@ class TextIndex:
         return len(self.document_mapping.keys())
     
     def get_document_filename(self, id:int)->str:
-        return self.reverse_document_mapping[id]
+        return self.reverse_document_mapping[int(id)]
 
     def get_document_full_vector(self, doc_id:int, tf_mode:TF_MODE):
         document = self.tokenized_documents[str(doc_id)] 
@@ -78,6 +78,8 @@ class TextIndex:
             
             return set.union(*document_ids)
 
+    def get_term_frequency(self, document_id:int, token_id:int):
+        return self.index[str(token_id)]["pages"][document_id]
 
 
 class Indexer:
@@ -111,10 +113,10 @@ class Indexer:
             num_tokens.append(token_idx)
 
             if token_idx not in self._index_data:
-                self._index_data[token_idx] = {"pages":set()}
+                self._index_data[token_idx] = {"pages":dict()}
 
             if page_id not in self._index_data[token_idx]:
-                self._index_data[token_idx]["pages"].add(page_id)
+                self._index_data[token_idx]["pages"][page_id] = tokens.count(token)
 
         self._tokenized_documents[page_id] = num_tokens
         

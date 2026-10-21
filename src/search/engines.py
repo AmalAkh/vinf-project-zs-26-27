@@ -15,7 +15,7 @@ from src.indexing.idf_indexer import TextIndex
 from src.indexing.tokenize import prepare_for_indexing, convert_string_tokens_to_num
 from src.search.utils import *
 
-
+QUERY_MODE = Literal["or", "and"]
 
 
 class SearchEngine:
@@ -24,7 +24,7 @@ class SearchEngine:
         self._index = TextIndex("./data/index")
 
     
-    def search(self, query:str, tf_mode:TF_MODE = "natural", tf_norm_mode:TF_NORM_MODE="none", use_cosine:bool=False, normalize:bool=True):
+    def search(self, query:str, tf_mode:TF_MODE = "natural", tf_norm_mode:TF_NORM_MODE="none", query_mode:QUERY_MODE="or", use_cosine:bool=False, normalize:bool=True):
         query_tokens = list(set(prepare_for_indexing(query.lower())))
         
         numerical_tokens = convert_string_tokens_to_num(query_tokens, self._index.tokens_to_num)
@@ -36,10 +36,17 @@ class SearchEngine:
         query_tfs = dict(Counter(numerical_tokens))
         query_idfs = {}
 
-        
+        if query_mode == "and":
+            relevant_documents_ids = self._index.get_documents_with_terms_and(numerical_tokens)
+        elif query_mode == "or":
+            relevant_documents_ids = self._index.get_documents_with_terms_and(numerical_tokens)
+        else:
+            relevant_documents_ids = self._index.get_documents_with_terms_and(numerical_tokens)
+
+
         for token in numerical_tokens:
-            relevant_documents_ids = self._index.get_documents_with_term(token)
-            idf_val = idf(self._index.get_documents_count(), len(relevant_documents_ids))
+            
+            idf_val = idf(self._index.get_documents_count(), len(self._index.get_documents_with_term(token)))
             query_idfs[token] = idf_val
 
             for id in relevant_documents_ids:
@@ -122,7 +129,7 @@ class SearchEngine:
 if __name__ == "__main__":
     engine = SearchEngine()
     parsed_files_folder = "./data/parsed"
-    results = engine.search("Sukhoi fighter jet 5th generation", tf_mode="log", tf_norm_mode="none", use_cosine=False)
+    results = engine.search("Fighter and Fulcrum-D", tf_mode="log", tf_norm_mode="none", use_cosine=False)
     print()
     for idx, result in enumerate(results):
         print(f"{idx+1}. {result[1]} {get_title_by_filename(result[0], parsed_files_folder)}")
