@@ -61,6 +61,24 @@ class TextIndex:
             idfs[token] = idf_val
             
         return compute_tf_idf_score(tfs, idfs, len(document), tf_mode=tf_mode)
+    
+    def get_documents_with_terms_and(self, tokens:list[int]):
+        
+        document_ids = []
+        for token in tokens:
+            document_ids.append(set(self.get_documents_with_term(token)))
+        
+        return set.intersection(*document_ids)
+
+    def get_documents_with_terms_or(self, tokens:list[int]):
+            
+            document_ids = []
+            for token in tokens:
+                document_ids.append(set(self.get_documents_with_term(token)))
+            
+            return set.union(*document_ids)
+
+
 
 class Indexer:
 
