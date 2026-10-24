@@ -55,9 +55,9 @@ class TextIndex:
         idfs = {}
 
         for token in document:
-            relevant_documents_ids = self.index[str(token)]["pages"]
-            tfs[token] = document.count(tfs)
-            idf_val = idf(self.get_documents_count(), len(relevant_documents_ids))
+         
+            tfs[token] = self.index[str(token)]["pages"][doc_id]
+            idf_val = idf(self.get_documents_count(), len(self.index[str(token)]["pages"].values()))
             idfs[token] = idf_val
             
         return compute_tf_idf_score(tfs, idfs, len(document), tf_mode=tf_mode)
@@ -149,7 +149,7 @@ class Indexer:
             self.save_index()
 
     def _generate_full_text_for_indexing(self, record:dict[str,any]):
-        return f"{record["title"]} {record["content_clear"]} {'\n'.join(record["variants"])}"
+        return f"{record["title"]*10} {record["content_clear"]} {'\n'.join(record["variants"])} {'\n'.join(record["paramaters"])} {record["armament"]} {'\n'.join(record["role"])} {record["country"]} {record["year"]}"
     def save_index(self):
        
         with open(os.path.join(self.output_path,"index.json"), "w") as file:
@@ -174,6 +174,7 @@ def set_default(obj):
     if isinstance(obj, set):
         return list(obj)
     raise TypeError
+
 if __name__ == "__main__":
     indexer = Indexer("./data/parsed", "./data/index")
     indexer.index()

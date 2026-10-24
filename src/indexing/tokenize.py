@@ -3,7 +3,7 @@ import re
 
 
 def remove_stop_words(text:str):
-    return re.sub(r'\b(?:the\s|a\s|to\s|with\s|as\s)\b', '', text, flags=re.IGNORECASE)
+    return re.sub(r'\b(?:the\s|a\s|to\s|with\s|as\s|out\s|of\s)\b', '', text, flags=re.IGNORECASE)
 
 def remove_punctuations(text:str):
     return re.sub(r'[\.\,\;\:\?\!\`\'\"\(\)\[\]\{\}\~\_\-]', " ", text)

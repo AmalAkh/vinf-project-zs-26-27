@@ -15,6 +15,8 @@ def tf_norm_max(tf:int, max:int|float):
     return (tf/max)
 
 def idf(document_num:int, document_with_t_num:int):
+    if document_with_t_num == 0:
+        return 0
     return math.log10(document_num/document_with_t_num)
 
 def tf_idf(tf:float, idf:float):
@@ -24,16 +26,20 @@ def augmented_tf_idf(tf:float|int, idf:float, a:float=0.5):
     return (a+ (1-a)*tf)*idf
 
 def log_tf(tf:float|int):
+    if tf <= 0:
+        tf = 1
     wf = 1+math.log10(tf) if tf > 0 else 0
     return wf
 
 def log_avg_tf_idf(tf:float|int, avg_tf:float):
+    if tf <= 0:
+        tf = 1
     return (1+math.log10(tf))/(1+math.log10(avg_tf))
 
         
 
 def compute_tf_idf_score(tfs:dict[int, float],idfs:list[int, float], document_length:int, tf_mode:TF_MODE):
-    
+   
       
     if tf_mode == "log":
         scores = {

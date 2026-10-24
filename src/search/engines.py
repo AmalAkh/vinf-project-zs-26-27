@@ -24,7 +24,7 @@ class SearchEngine:
         self._index = TextIndex("./data/index")
 
     
-    def search(self, query:str, tf_mode:TF_MODE = "natural", query_mode:QUERY_MODE="or", use_cosine:bool=False, normalize:bool=True):
+    def search(self, query:str, tf_mode:TF_MODE = "natural", query_mode:QUERY_MODE="or", use_cosine:bool=False, normalize:bool=False):
         query_tokens = list(set(prepare_for_indexing(query.lower())))
         
         numerical_tokens = convert_string_tokens_to_num(query_tokens, self._index.tokens_to_num)
@@ -38,14 +38,12 @@ class SearchEngine:
 
         if query_mode == "and":
             relevant_documents_ids = self._index.get_documents_with_terms_and(numerical_tokens)
-        elif query_mode == "or":
-            relevant_documents_ids = self._index.get_documents_with_terms_or(numerical_tokens)
-        else:
-            relevant_documents_ids = self._index.get_documents_with_terms_or(numerical_tokens)
+       
 
 
         for token in numerical_tokens:
-            
+            if query_mode == "or":
+                relevant_documents_ids = self._index.get_documents_with_term(token)
             idf_val = idf(self._index.get_documents_count(), len(self._index.get_documents_with_term(token)))
             query_idfs[token] = idf_val
 
@@ -88,10 +86,10 @@ class SearchEngine:
                     for token, query_weight in query_scores.items()
                 )
 
-                # Full document magnitude (precomputed during indexing)
+                
                 document_norm = math.sqrt(
                     sum(
-                        weight**2 for weight in self._index.get_document_full_vector(doc_id, tf_mode)
+                        weight**2 for weight in self._index.get_document_full_vector(id, tf_mode)
                     )
                 )
 
@@ -103,7 +101,12 @@ class SearchEngine:
                     )
                 
             else:
-                final_scores[id] = sum(scores[id].values())
+                if normalize:
+                    norm = math.sqrt(sum([score**2 for score in scores[id].values()]))
+                    
+                    final_scores[id] = sum([score/norm for score in scores[id].values()])
+                else:
+                    final_scores[id] = sum(scores[id].values())
                 
 
         sorted_scores = [(self._index.get_document_filename(id), value)  for id, value in sorted(final_scores.items(), key=lambda x:x[1], reverse=True)]
@@ -127,10 +130,44 @@ class SearchEngine:
         return deduplicated_result
     
 if __name__ == "__main__":
+    '''
     engine = SearchEngine()
     parsed_files_folder = "./data/parsed"
-    results = engine.search("Fighter jet with NATO codename Fulcrum", query_mode="or", tf_mode="natural", use_cosine=False)
+    results = engine.search("Fighter jet codename Fulcrum", query_mode="or", tf_mode="log", use_cosine=True, normalize=False)
     print()
     for idx, result in enumerate(results):
-        print(f"{idx+1}. {result[1]:4f} {get_title_by_filename(result[0], parsed_files_folder)}")
+        print(f"{idx+1}. {result[1]:.8f} {get_title_by_filename(result[0], parsed_files_folder)}")
     print()
+    '''
+    engine = SearchEngine()
+    parsed_files_folder = "./data/parsed"
+    ## (query mode, idf type, normialize (euclid), use cosine)
+    config = [
+        ('or', 'natural', False, False),
+        ('or', 'log', False, False), 
+        ("or", "log_avg", False, False), 
+        ("or", "norm_max", False, False),
+        ("or", "log", True, False),
+        ("or", "log_avg", True, False),
+        ("or", "log", True, True),
+    ] 
+    queries = [
+        "MiG supersonic fighter jet",
+        "American McDonnell Douglas carrier-based fighter jets",
+        "Cold War American carrier-based jet fighters",
+        "Carrier-based fighter jets with folding wings"
+    ]
+    for query in queries:
+        for conf_t in config:
+            
+            print("Config")
+            print(conf_t)
+            print("Query")
+            print(query)
+
+            results = engine.search(query, query_mode=conf_t[0], tf_mode=conf_t[1], use_cosine=conf_t[3], normalize=conf_t[2])
+            print()
+            for idx, result in enumerate(results):
+                print(f"{idx+1}. {result[1]:.8f} {get_title_by_filename(result[0], parsed_files_folder)}")
+            print()
+    
