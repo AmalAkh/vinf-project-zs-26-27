@@ -7,8 +7,8 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from extraction.extractors import extract_links
-from src.crawling.utils import get_page_source, filter_links, save_list_to_txt, read_txt_as_list, format_links, save_source_to_html, save_parsed_as_json
+from src.extraction.extractors import extract_links
+from src.crawling.utils import get_page_source, filter_links, save_list_to_txt, read_txt_as_list, format_links, save_source_to_html
 from src.utils.logging import log
 
 CRAWLER_READ_LINKS_PATH="data/read_links.txt"
