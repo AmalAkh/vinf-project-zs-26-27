@@ -154,7 +154,6 @@ if __name__ == "__main__":
     queries = [
         "MiG supersonic fighter jet",
         "American McDonnell Douglas carrier-based fighter jets",
-        "Cold War American carrier-based jet fighters",
         "Carrier-based fighter jets with folding wings"
     ]
     for query in queries:
