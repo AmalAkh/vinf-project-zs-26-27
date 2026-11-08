@@ -1,173 +1,143 @@
 from pyspark.sql import SparkSession
 from pyspark.sql import functions as F
+from pyspark.sql.types import (
+    StructType,
+    StructField,
+    StringType,
+    LongType,
+)
+import os
+from pathlib import Path
 
-
-REGEX_PATTERNS = {
-    "title_main": (
-        r'<h1[^>]*class="[^">]*"[^>]*>'
-        r'<span[^">]*class="[^">]*"[^">]*>(.+)</span></h1>'
-    ),
-
-    "title_fallback": r'<title[^>]*>(.+?)</title>',
-
-    "description": (
-        r'<!--BODYTEXT\d+-->\s*'
-        r'<div[^>]*class="[^"]*contentStripOuter[^>]*"[^"]*>.*?'
-        r'<span[^>]*class="[^"]*"[^>]*>\s*(.*?)\s*</span>.*?'
-        r'<!--BODYTEXT\d+-->\s*'
-    ),
-
-    "description_html_cleanup": r'</?[^>]+\s*/?>',
-
-    "description_whitespace_cleanup": r'\s{2,}',
-
-    "variants": (
-        r'<button[^>]*class="[^"]*collapsible[^"]*picTrans[^"]*"[^>]*>.*?Variants.*?</button>\s*'
-        r'<div[^>]*class="[^"]*dropdownContent[^"]*"[^>]*>\s*'
-        r'<div[^>]*>\s*'
-        r'<span[^>]*class="[^"]*textDkGray[^"]*textNormal"[^>]*>(.*?)</span>'
-    ),
-
-    "performance_parameters": (
-        r'<div[^>]*class="specContainerMain[^"]*">\s*'
-        r'<span[^>]*class="[^">]*textNormal[^">]*">([^<]+)</span>\s*'
-        r'<br\s*/?>\s*'
-        r'<span[^>]*class="[^">]*textBold[^">]*">[^<]+</span>\s*'
-        r'<br\s*/?>\s*'
-        r'<span[^>]*class="[^">]*textNormal[^">]*">\(([^<]+)\)</span>\s*'
-        r'</div>'
-    ),
-
-    "unit_produced": r'Total Production:.+ (\d+?) Units',
-
-    "operators": (
-        r'<a\s[^>]*'
-        r'class="picTrans"[^>]*'
-        r'title="[^"]*nation of (?:the )?([^"]+)"'
-        r'[^>]*>'
-    ),
-
-    "roles": (
-        r'<div[^>"]+class="roleContainers[^>"]*">([^>]+)'
-        r'</div>'
-    ),
-
-    "country_and_year": (
-        r'<h3[^>]*class="[^"]*">\s*([^|>]+?)\s*\|\s*([^|>]+?)</h3>'
-    ),
-
-    "armament": (
-        r'<button[^>]*class="[^"]*collapsible[^"]*picTrans[^"]*"[^>]*>.*?Armament.*?</button>\s*'
-        r'<div[^>]*class="[^"]*dropdownContent[^"]*"[^>]*>\s*'
-        r'<div[^>]*>\s*'
-        r'<span[^>]*class="[^"]*textDkGray[^"]*textNormal"[^>]*>(.*?)</span>'
-    ),
-
-    "propulsion": (
-        r'<div[^>]*class="[^"]*specContainerMain[^"]*">\s*'
-        r'<span[^>]*class="[^">]*">.*?Propulsion.*?</span>\s*'
-        r'<br\s*/?>\s*'
-        r'<span[^>]*class="[^">]*">\s*([^>]*)\s*</span>'
-    ),
-
-    "html_tag_cleanup": r'</?[^>]+>',
-
-    "links_primary": (
-        r'<(a|div)\b[^>]*\s(?:href|data-url)="([^"]*)"[^>]*>([^<]*)</\1>'
-    ),
-
-    "links_secondary": (
-        r'<(a|div)\b[^>]*\s(?:href|data-url)="([^"]*)"\s'
-        r'[^>]*title="([^>"]+)"\s*[^>]*>[\s\S]*?</\1>'
-    ),
-}
 spark = (
     SparkSession.builder
-    .appName("RemotePySpark")
-    .master("spark://localhost:7077")
-    .config("spark.driver.host", "host.docker.internal")
-    .config("spark.driver.bindAddress", "0.0.0.0")
-    .config("spark.driver.port", "7078")
-    .config("spark.blockManager.port", "7079")
+    .appName("MyPySparkJob")
+    .master("local[8]")
+    .config("spark.driver.host", "127.0.0.1")
+    .config("spark.driver.bindAddress", "127.0.0.1")
+    .config("spark.sql.shuffle.partitions", "16")
     .getOrCreate()
 )
 
-INPUT_FILES_FOLDER = "/Users/amalakhmadinurov/Desktop/ZS_2026_2027/VINF/Project/data/raw_data/"
-OUTPUT_FOLDER = "/Users/amalakhmadinurov/Desktop/ZS_2026_2027/VINF/Project/data/output/"
+INPUT_FILES_PATH = "/Users/amalakhmadinurov/Desktop/ZS_2026_2027/VINF/Project/data/spark_input/enwiki-latest-pages-articles.xml.bz2"
+INPUT_TEST_FILE_PATH = "/Users/amalakhmadinurov/Desktop/ZS_2026_2027/VINF/Project/data/spark_input/test_example/example.xml"
+
+OUTPUT_FILES_PATH = "/Users/amalakhmadinurov/Desktop/ZS_2026_2027/VINF/Project/data/spark_output/"
 
 
+
+REGEX_PATTERNS = {
+    "INFOBOX":(
+    r"(?m)^[ \t]*\|[ \t]*"
+    r"([A-Za-z_][A-Za-z0-9_]*)"
+    r"[ \t]*=[ \t]*(.*)$"
+    ),
+    "VARIANTS_SECTION": (
+        r"(?ms)^[ \t]*==[ \t]*Variants[ \t]*==[ \t]*\r?\n"
+        r"(.*?)"
+        r"(?=^[ \t]*==(?!=)[^\r\n]*==[ \t]*\r?$|\z)"
+    ),
+    "VARIANT":(
+        r"(?m)[ \t]*;[ \t]*([^:\r\n]+):[ \t]*(.*?)(?=,\s*;|$)"
+    ),
+    "AIRCRAFT":(
+        r"(?i)\[\[\s*category\s*:"
+        r"[^\]\|\n]*?"
+        r"(aircraft|airplane|glider|helicopter)"
+        r"[^\]\|\n]*?"
+        r"\]\]"
+    ),
+    "INFOBOX_AIRCRAFT":(
+        r"(?i)\{\{\s*infobox[\s_]+(aircraft|helicopter)\r?\n"
+    )
+}
+
+schema = StructType([
+    StructField("title", StringType()),
+    StructField("ns", LongType()),
+    StructField("id", LongType()),
+    StructField("revision", StructType([
+        StructField("text", StringType())
+    ]))
+])
+
+sc = spark.sparkContext
+
+rdd = sc.newAPIHadoopFile(INPUT_FILES_PATH, 
+    inputFormatClass=(
+        "org.apache.spark.sql.execution.datasources.xml.XmlInputFormat"
+    ),
+    keyClass="org.apache.hadoop.io.LongWritable",
+    valueClass="org.apache.hadoop.io.Text",
+    conf={
+        "xmlinput.start": "<page>",
+        "xmlinput.end": "</page>",
+        "mapreduce.input.fileinputformat.split.minsize":
+            str(256 * 1024 * 1024),
+    }
+).values()
+print("Input partitions:", rdd.getNumPartitions())
+df = spark.createDataFrame(
+    rdd.map(lambda xml: (xml,)),
+    schema="raw_xml STRING"
+)
+df = df.select(F.from_xml("raw_xml", schema).alias("page")).select("page.*")
+df.printSchema()
+#new_df = df.select("title",F.col("revision")["text"].cast("string").alias("text"))
+print("Available Spark parallelism:",
+      spark.sparkContext.defaultParallelism)
+
+print("Input files:", len(df.inputFiles()))
+print("Default partitions:", df.rdd.getNumPartitions())
+
+only_articles_df = (
+    df.filter(F.col("ns") == 0)
+    .select(
+        F.col("id").alias("page_id"),
+        F.col("title"),
+        F.col("revision.text").alias("text")
+    )
+)
+only_articles_df = only_articles_df.filter(F.regexp_like("text", F.lit(REGEX_PATTERNS["INFOBOX_AIRCRAFT"])))
+
+# This DOES trigger actual reading of the dump.
+only_articles_df.show(50, truncate=80)
+only_articles_df.write.mode("overwrite").parquet(
+    OUTPUT_FILES_PATH + "aircraft_articles"
+)
+print(only_articles_df.count())
+
+
+
+'''
 # One row per text file
-df = spark.read.text(
-    INPUT_FILES_FOLDER,
-    wholetext=True
+
+df = spark.read.option("rowTag", "page").xml(INPUT_FILES_PATH)
+new_df = df.select("title",F.col("revision")["text"].cast("string").alias("text"))
+
+
+# clear text from special wiki markup symbols
+new_df = new_df.select("title", F.regexp_replace("text", r"(?s)\{\{.*?\}\}|\[\[|\]\]|<ref\b[^>]*>.*?</ref>|<ref\b[^>]*/>|<!--.*-->", "").alias("text_clear"))
+
+# Extract information from the info table
+new_df = new_df.select("title", "text_clear",                     
+    F.regexp_extract_all("text_clear", F.lit(REGEX_PATTERNS["INFOBOX"]), 0).alias("info_raw")
+).select("title", "text_clear", F.transform("info_raw", lambda info:F.split(F.regexp_replace(info, r"^\s*\|\s*", ""), r"\s*=\s*")).alias("info_table"))
+
+new_df = new_df.select("title", "text_clear", "info_table" ,
+    F.regexp_extract("text_clear", REGEX_PATTERNS["VARIANTS_SECTION"], 1).alias("variants_raw"))
+
+
+new_df = new_df.select("title", "info_table", "text_clear", "variants_raw",
+    F.map_from_arrays(
+        F.regexp_extract_all("variants_raw", F.lit(REGEX_PATTERNS["VARIANT"]), 1),
+        F.regexp_extract_all("variants_raw", F.lit(REGEX_PATTERNS["VARIANT"]), 2)
+    ).alias("variants")
 )
 
-new_df = df.select(
-    # Titles
-    F.regexp_extract(
-        "value", REGEX_PATTERNS["title_main"], 1
-    ).alias("title_main"),
+new_df.printSchema()
+new_df.select("info_table").show(truncate=False)
+new_df.write.mode("overwrite").json(os.path.join(OUTPUT_FILES_PATH,"wiki_data.json"))
+#df.select(F.regexp_extract_all("text", REGEX_PATTERNS["INFOBOX"]))
 
-    F.regexp_extract(
-        "value", REGEX_PATTERNS["title_fallback"], 1
-    ).alias("title_fallback"),
-
-    # Description
-    F.regexp_extract(
-        F.col("value"), F.lit("(?s)" + REGEX_PATTERNS["description"]), 1
-    ).alias("description"),
-
-    # Variants
-    F.regexp_extract_all(
-        "value", F.lit(REGEX_PATTERNS["variants"]), 1
-    ).alias("variants"),
-
-    # Performance parameters (two capture groups)
-    F.regexp_extract_all(
-        "value", F.lit(REGEX_PATTERNS["performance_parameters"]), 1
-    ).alias("performance_parameter_names"),
-
-    F.regexp_extract_all(
-        "value", F.lit(REGEX_PATTERNS["performance_parameters"]), 2
-    ).alias("performance_parameter_values"),
-
-    # Production
-    F.regexp_extract(
-        "value", REGEX_PATTERNS["unit_produced"], 1
-    ).alias("unit_produced"),
-
-    # Operators
-    F.regexp_extract_all(
-        "value", F.lit(REGEX_PATTERNS["operators"]), 1
-    ).alias("operators"),
-
-    # Roles
-    F.regexp_extract_all(
-        "value", F.lit(REGEX_PATTERNS["roles"]), 1
-    ).alias("roles"),
-
-    # Country and year (two capture groups)
-    F.regexp_extract(
-        "value", REGEX_PATTERNS["country_and_year"], 1
-    ).alias("country"),
-
-    F.regexp_extract(
-        "value", REGEX_PATTERNS["country_and_year"], 2
-    ).alias("year"),
-
-    # Armament
-    F.regexp_extract_all(
-        "value", F.lit(REGEX_PATTERNS["armament"]), 1
-    ).alias("armament"),
-
-    # Propulsion
-    F.regexp_extract_all(
-        "value", F.lit(REGEX_PATTERNS["propulsion"]), 1
-    ).alias("propulsion"),
-
-   
-)
-print(new_df.collect()[-1244])
-new_df.write \
-    .mode("overwrite") \
-    .json(OUTPUT_FOLDER + "ships.json")
+'''
