@@ -6,3 +6,5 @@ data/scrapped
 data/indexed
 data/raw_data
 data/
+data/spark_input
+data/spark_output
