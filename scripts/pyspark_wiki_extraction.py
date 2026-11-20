@@ -126,8 +126,8 @@ original_site_schema = StructType([
 
 def normalize_key(col):
     return F.regexp_replace(
-        F.regexp_replace(F.trim(F.lower(col)), r"\(.+?\)", ""), 
-    r"\s+", "-")
+        F.trim(F.regexp_replace(F.trim(F.lower(col)), r"\(.+?\)", "")), 
+    r"\s+|/", "-")
     
 
 original_site_df = spark.read.schema(original_site_schema).parquet(os.path.join(INPUT_FILES_PATH, "aircraft_articles_original_site/"))
@@ -143,17 +143,25 @@ original_site_df.show(20, truncate=True)
 new_df = new_df.withColumn("title_key", normalize_key(F.col("title")))
 
 
-
+'''
 merged_df = (
     original_site_df.alias("original").
     join(new_df.alias("wiki"), original_site_df["title_key"] == new_df["title_key"], "inner")
 )
+'''
+
+merged_df = (
+    original_site_df.alias("original").
+    join(new_df.alias("wiki"), original_site_df["title_key"] == new_df["title_key"], how="inner")
+)
 
 merged_df = merged_df.withColumn("ratio", F.levenshtein("original.title_key", "wiki.title_key"))
-merged_df.select("wiki.title_key", "original.title_key", "ratio").show(1000, truncate=False)
+merged_df.select("wiki.title_key", "original.title_key", "ratio").show(1300, truncate=False)
+print(original_site_df.count())
+print(merged_df.count())
 
-'''
-original_site_df.write.mode("overwrite").parquet(
-    OUTPUT_FILES_PATH + "aircraft_articles_original_site"
+
+merged_df.write.mode("overwrite").json(
+    OUTPUT_FILES_PATH + "aircraft_articles_after_join"
 )
-'''
+
