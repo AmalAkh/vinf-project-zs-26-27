@@ -9,6 +9,7 @@ sys.path.insert(0, str(PROJECT_ROOT))
 
 from src.extraction.utils import save_parsed_as_json
 from src.utils.logging import log
+from src.crawling.utils import filter_links
 class Extractor:
 
     def __init__(self, input_dir:str|Path, output_dir:str|Path):
@@ -18,6 +19,19 @@ class Extractor:
         
     def _extract_links(self, source:str)->list[str]:
         return extract_links(source)
+
+    def _extract_original_link(self, source:str)->str:
+        for link_tag in re.finditer(r'<link\b[^>]*>', source, re.IGNORECASE):
+            attributes = dict(
+                (name.lower(), value)
+                for name, value in re.findall(
+                    r'([\w:-]+)\s*=\s*["\']([^"\']*)["\']',
+                    link_tag.group(0),
+                )
+            )
+            if "canonical" in attributes.get("rel", "").lower().split():
+                return attributes.get("href", "")
+        return ""
 
     def _extract_title(self, source:str)->str:
         main_pattern = r'<h1[^>]*class="[^">]*"[^>]*><span[^">]*class="[^">]*"[^">]*>(.+)</span></h1>'
@@ -39,21 +53,19 @@ class Extractor:
             r'<!--BODYTEXT\d+-->\s*'
         )
 
+        
+
         matches = re.findall(pattern, source, re.DOTALL)
 
         if not matches:
             return "", ""
 
         raw_content = " ".join(matches)
+        raw_content = re.split(r"<br\s?/>\n<br\s?/>", raw_content)[0]
 
-        cleaned_parts = []
-        for content in matches:
-            text = content.replace("\n", " ")
-            text = re.sub(r'</?[^>]+\s*/?>', " ", text)
-            text = re.sub(r'\s{2,}', ' ', text)
-            cleaned_parts.append(text.strip())
-
-        clear_content = " ".join(cleaned_parts)
+        clear_content = raw_content.replace("\n", " ")
+        clear_content = re.sub(r'</?[^>]+\s*/?>', " ", clear_content)
+        clear_content = re.sub(r'\s{2,}', ' ', clear_content).strip()
 
         return clear_content, raw_content
 
@@ -179,8 +191,9 @@ class Extractor:
         result["content_clear"] = clear_text
         result["content_raw"] = raw_desc_content
     
+        result["original_link"] = self._extract_original_link(page_source)
     
-        result["links"] = self._extract_links(page_source)
+        result["links"] = filter_links(self._extract_links(page_source), result["original_link"])
         result["variants"] = self._extract_variants(page_source)
         result["paramaters"] = self._extract_performance_parameters(page_source)
         result["operators"] = self._extract_operators(page_source)
