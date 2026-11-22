@@ -7,6 +7,6 @@ sys.path.insert(0, str(PROJECT_ROOT))
 
 from src.indexing.idf_indexer import Indexer
 if __name__ == "__main__":
-    indexer = Indexer("data/raw_data/", "data/parsed/") 
+    indexer = Indexer("data/parsed/", "data/index") 
 
     indexer.index()
