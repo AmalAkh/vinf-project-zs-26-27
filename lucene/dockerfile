@@ -1,0 +1,11 @@
+
+FROM coady/pylucene:10.0.0
+
+WORKDIR /scripts
+
+ENV PYTHONUNBUFFERED=1
+
+COPY pylucene.py /scripts/
+
+
+CMD ["bash"]
