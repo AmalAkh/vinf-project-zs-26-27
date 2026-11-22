@@ -6,6 +6,8 @@ WORKDIR /scripts
 ENV PYTHONUNBUFFERED=1
 
 COPY pylucene.py /scripts/
+COPY run_pylucene_tests.py /scripts/
+
 
 
 CMD ["bash"]
