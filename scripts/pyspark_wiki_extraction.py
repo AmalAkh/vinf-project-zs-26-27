@@ -152,11 +152,27 @@ merged_df = (
 
 merged_df = (
     original_site_df.alias("original").
-    join(new_df.alias("wiki"), original_site_df["title_key"] == new_df["title_key"], how="inner")
+    join(new_df.alias("wiki"), original_site_df["title_key"] == new_df["title_key"], how="inner").select(
+        F.col("original.title").alias("title"),
+        F.col("original.year"),
+        F.col("original.country"),
+        F.col("original.content_clear"),
+        F.col("original.armament"),
+        F.col("original.propulsion"),
+        F.col("wiki.title").alias("wiki_title"),
+        F.col("wiki.categories"),
+        F.col("wiki.variants"),
+        F.col("wiki.info"),
+        F.col("wiki.specs"),
+        F.col("original.title_key").alias("title_key")
+    )
 )
 
+'''
 merged_df = merged_df.withColumn("ratio", F.levenshtein("original.title_key", "wiki.title_key"))
 merged_df.select("wiki.title_key", "original.title_key", "ratio").show(1300, truncate=False)
+
+'''
 print(original_site_df.count())
 print(merged_df.count())
 
