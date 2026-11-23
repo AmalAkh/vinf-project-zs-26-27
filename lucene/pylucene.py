@@ -5,19 +5,27 @@ import os
 from pathlib import Path
 
 import lucene
+from java.lang import Double
 from java.nio.file import Paths
-
+from java.text import NumberFormat
+from java.util import HashMap, Locale
+from org.apache.lucene.analysis.en import EnglishAnalyzer
 from org.apache.lucene.analysis.standard import StandardAnalyzer
-from org.apache.lucene.document import Document, TextField, StringField, IntField, LongField, Field
+from org.apache.lucene.document import (
+    Document,
+    TextField,
+    StringField,
+    IntField,
+    LongField,
+    DoublePoint,
+    StoredField,
+    Field,
+)
 from org.apache.lucene.index import IndexWriter, IndexWriterConfig, DirectoryReader
 from org.apache.lucene.store import FSDirectory
-from org.apache.lucene.search import (
-    IndexSearcher,
-    BooleanQuery,
-    BooleanClause,
-    BoostQuery
-)
-from org.apache.lucene.queryparser.classic import QueryParser
+from org.apache.lucene.search import IndexSearcher, BooleanQuery, BooleanClause, BoostQuery
+from org.apache.lucene.queryparser.flexible.standard import StandardQueryParser
+from org.apache.lucene.queryparser.flexible.standard.config import PointsConfig
 
 
 
@@ -36,7 +44,18 @@ EXACT_FIELDS = {
 }
 
 # Numeric fields
-INTEGER_FIELDS = {"year", "info.number_built"}
+INTEGER_FIELDS = {"year", "info.number_built", ""}
+DOUBLE_FIELDS = {
+    "maximum_speed_kph",
+    "service_ceiling_m",
+    "operational_range_km",
+    "rate_of_climb_m_per_min",
+    "length_m",
+    "width_m",
+    "height_m",
+    "empty_weight_kg",
+    "mtow_kg",
+}
 
 # Text field
 TEXT_FIELDS = {
@@ -80,6 +99,14 @@ def create_document(record):
             except (ValueError, TypeError):
                 continue
 
+        elif name in DOUBLE_FIELDS:
+            try:
+                numeric_value = float(value)
+                doc.add(DoublePoint(name, numeric_value))
+                doc.add(StoredField(name, numeric_value))
+            except (ValueError, TypeError):
+                continue
+
         elif name == "categories":
             for category in str(value).split("|"):
                 category = category.strip()
@@ -100,6 +127,18 @@ def create_document(record):
             doc.add(TextField(name, str(value), Field.Store.YES))
 
     return doc
+
+
+def create_query_parser(analyzer):
+    parser = StandardQueryParser(analyzer)
+
+    number_format = NumberFormat.getInstance(Locale.US)
+    points_config_map = HashMap()
+    for name in DOUBLE_FIELDS:
+        points_config_map.put(name, PointsConfig(number_format, Double.class_))
+    parser.setPointsConfigMap(points_config_map)
+
+    return parser
 
 
 def index_documents():
@@ -136,72 +175,26 @@ def search_documents(query_text):
     reader = DirectoryReader.open(directory)
 
     searcher = IndexSearcher(reader)
-    analyzer = StandardAnalyzer()
+    analyzer = EnglishAnalyzer()
+    parser = create_query_parser(analyzer)
 
-    title_query = QueryParser("title", analyzer).parse(query_text)
-    content_query = QueryParser("content", analyzer).parse(query_text)
-    armament_query = QueryParser("armament", analyzer).parse(query_text)
-    categories_query = QueryParser("categories", analyzer).parse(query_text)
-    categories_not_exact_query = QueryParser("categories_not_exact", analyzer).parse(query_text)
-
-    country_query = QueryParser("country", analyzer).parse(query_text)
-    type_query = QueryParser("info.type", analyzer).parse(query_text)
-
-
-
-
-    # Boost title matches
-    boosted_title_query = BoostQuery(title_query, 3.0)
-    boosted_content_query = BoostQuery(content_query, 0.5)
-    boosted_armament_query = BoostQuery(armament_query, 2.0)
-    boosted_categories_query = BoostQuery(categories_query, 3.0)
-    boosted_categories_not_exact_query = BoostQuery(categories_not_exact_query, 1.5)
-
-    boosted_country_query = BoostQuery(country_query, 2.0)
-    boosted_type_query = BoostQuery(type_query, 2.0)
-
-
-
-
-
-    # Combine both fields
-    builder = BooleanQuery.Builder()
-
-    builder.add(
-        boosted_title_query,
-        BooleanClause.Occur.SHOULD
-    )
-
-    builder.add(
-        boosted_content_query,
-        BooleanClause.Occur.SHOULD
-    )
-
-    builder.add(
-        boosted_armament_query,
-        BooleanClause.Occur.SHOULD
-    )
-
-    builder.add(
-        boosted_categories_query,
-        BooleanClause.Occur.SHOULD
-    )
-
-    builder.add(
-        boosted_country_query,
-        BooleanClause.Occur.SHOULD
-    )
-
-    builder.add(
-        boosted_type_query,
-        BooleanClause.Occur.SHOULD
-    )
-    builder.add(
-        boosted_categories_not_exact_query,
-        BooleanClause.Occur.SHOULD
-    )
-
-    query = builder.build()
+    field_boosts = {
+        "title": 3.0,
+        "content": 0.5,
+        "armament": 2.0,
+        "categories": 3.0,
+        "categories_not_exact": 1.5,
+        "country": 2.0,
+        "info.type": 2.0,
+    }
+    query_builder = BooleanQuery.Builder()
+    for field_name, boost in field_boosts.items():
+        field_query = parser.parse(query_text, field_name)
+        query_builder.add(
+            BoostQuery(field_query, boost),
+            BooleanClause.Occur.SHOULD,
+        )
+    query = query_builder.build()
 
     results = searcher.search(query, 10)
 

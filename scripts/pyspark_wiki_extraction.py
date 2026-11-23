@@ -5,7 +5,6 @@ from pyspark.sql.types import (
     StructField,
     StringType,
     LongType,
-    MapType
 )
 import os
 from pathlib import Path
@@ -181,7 +180,19 @@ original_site_schema = StructType([
     StructField("country", StringType()),
     StructField("content_clear", StringType()),
     StructField("armament", StringType()),
-    StructField("propulsion", StringType())
+    StructField("propulsion", StringType()),
+    StructField("paramaters", StructType([
+        StructField("Maximum Speed", StringType()),
+        StructField("Service Ceiling", StringType()),
+        StructField("Operational Range", StringType()),
+        StructField("Rate-of-Climb", StringType()),
+        StructField("Length", StringType()),
+        StructField("Width", StringType()),
+        StructField("Height", StringType()),
+        StructField("Empty Weight", StringType()),
+        StructField("MTOW", StringType()),
+        StructField("Cruise Speed", StringType())
+    ]))
 
 
 ])
@@ -198,6 +209,29 @@ original_site_df = original_site_df.drop_duplicates(["title"])
 original_site_df = original_site_df.withColumn("title_key", normalize_key(F.col("title")))
 
 original_site_df = original_site_df.filter(F.col("content_clear") != "")
+
+METRIC_PARAMETER_FIELDS = {
+    "maximum_speed_kph": ("Maximum Speed", r"^\s*([\d,]+(?:\.\d+)?)\s*kph\b"),
+    "service_ceiling_m": ("Service Ceiling", r"^\s*([\d,]+(?:\.\d+)?)\s*m\b"),
+    "operational_range_km": ("Operational Range", r"^\s*([\d,]+(?:\.\d+)?)\s*km\b"),
+    "rate_of_climb_m_per_min": ("Rate-of-Climb", r"^\s*([\d,]+(?:\.\d+)?)\s*m\s*/\s*min\b"),
+    "length_m": ("Length", r"^\s*([\d,]+(?:\.\d+)?)\s*m\b"),
+    "width_m": ("Width", r"^\s*([\d,]+(?:\.\d+)?)\s*m\b"),
+    "height_m": ("Height", r"^\s*([\d,]+(?:\.\d+)?)\s*m\b"),
+    "empty_weight_kg": ("Empty Weight", r"^\s*([\d,]+(?:\.\d+)?)\s*kg\b"),
+    "mtow_kg": ("MTOW", r"^\s*([\d,]+(?:\.\d+)?)\s*kg\b"),
+}
+
+for field_name, (parameter_name, metric_pattern) in METRIC_PARAMETER_FIELDS.items():
+    metric_value = F.regexp_extract(
+        F.col("paramaters").getField(parameter_name),
+        metric_pattern,
+        1
+    )
+    original_site_df = original_site_df.withColumn(
+        field_name,
+        F.regexp_replace(metric_value, ",", "").cast("double")
+    )
 
 
 
@@ -218,6 +252,8 @@ merged_df_inner = (
         F.col("original.content_clear"),
         F.col("original.armament"),
         F.col("original.propulsion"),
+        F.col("original.paramaters"),
+        *[F.col(f"original.{field_name}") for field_name in METRIC_PARAMETER_FIELDS],
         F.col("wiki.title").alias("wiki_title"),
         F.col("wiki.categories"),
         F.col("wiki.variants"),
@@ -239,6 +275,8 @@ merged_df = (
         ),
         F.col("original.armament"),
         F.col("original.propulsion"),
+        F.col("original.paramaters"),
+        *[F.col(f"original.{field_name}") for field_name in METRIC_PARAMETER_FIELDS],
         F.col("wiki.title").alias("wiki_title"),
         F.col("wiki.categories"),
         F.col("wiki.variants"),
@@ -270,6 +308,10 @@ print(original_site_df.count())
 print(merged_df.count())
 print(merged_df_inner.count())
 
+
+merged_df_inner.printSchema()
+
+merged_df_inner.select(*METRIC_PARAMETER_FIELDS.keys()).show(truncate=True, n=10)
 
 merged_df.write.mode("overwrite").json(
     OUTPUT_FILES_PATH + "aircraft_articles_after_join"
