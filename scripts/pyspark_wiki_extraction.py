@@ -272,7 +272,7 @@ merged_df = (
         F.coalesce(
             F.col("original.content_clear"),
             F.col("wiki.first_section")
-        ),
+        ).alias("content"),
         F.col("original.armament"),
         F.col("original.propulsion"),
         F.col("original.paramaters"),

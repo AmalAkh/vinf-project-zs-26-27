@@ -60,7 +60,7 @@ DOUBLE_FIELDS = {
 # Text field
 TEXT_FIELDS = {
     "info.propulsion", "armament",
-    "content_clear"
+    "content"
 }
 
 def flatten(data, prefix=""):
@@ -68,7 +68,12 @@ def flatten(data, prefix=""):
     for key, value in data.items():
         name = f"{prefix}.{key}" if prefix else key
 
-        if isinstance(value, dict):
+        if name == "variants" and isinstance(value, dict):
+            for variant_name, description in value.items():
+                variant_text = f"{variant_name} {description or ''}".strip()
+                if variant_text:
+                    yield name, variant_text
+        elif isinstance(value, dict):
             yield from flatten(value, name)
         elif isinstance(value, list):
             for item in value:
@@ -186,6 +191,7 @@ def search_documents(query_text):
         "categories_not_exact": 1.5,
         "country": 2.0,
         "info.type": 2.0,
+        "variants": 2.0,
     }
     query_builder = BooleanQuery.Builder()
     for field_name, boost in field_boosts.items():
@@ -211,6 +217,7 @@ def search_documents(query_text):
         print("Title:", doc.get("title"))
         print("Categories:", doc.get("categories"))
         print("Country:", doc.get("country"))
+      
 
 
         print("Score:", hit.score)
