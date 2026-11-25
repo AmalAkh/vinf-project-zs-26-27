@@ -119,7 +119,17 @@ class SearchEngine:
         seen = set()
 
         for filename, score in scores:
-            normalized = filename.replace("_asp", "")
+            # The parsed corpus contains copies saved both with and without
+            # the source host prefix, and with `_asp` in the route name.
+            # Collapse those filename variants to the same page key.
+            normalized = Path(filename).stem.casefold()
+            for prefix in ("http___militaryfactory_com_", "https___militaryfactory_com_"):
+                if normalized.startswith(prefix):
+                    normalized = normalized[len(prefix):]
+                    break
+            normalized = normalized.replace("_asp_", "_")
+            if normalized.endswith("_asp"):
+                normalized = normalized[:-4]
 
             if normalized in seen:
                 continue
